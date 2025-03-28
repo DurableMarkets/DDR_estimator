@@ -1,0 +1,3 @@
+[submodule "submodules/durable"]
+	path = submodules/durable
+	url = https://github.com/DurableMarkets/durable.git
