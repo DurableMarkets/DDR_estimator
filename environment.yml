@@ -1,0 +1,31 @@
+name: ddr_est
+channels:
+  - conda-forge
+dependencies:
+  - python >=3.7
+  - numpy
+  - scipy
+  - pandas
+
+  # Testing infrastructure
+  - pytest
+  - pytest-cov
+  - pytest-xdist
+
+  # Tools
+  - black
+  - flake8
+  - pdbpp
+  - pre-commit
+  - toml
+  - tqdm
+
+  # Plotting
+  - matplotlib
+  - seaborn
+
+   # JAX
+  - pip:
+      - jaxlib<0.4.34
+      - jax<0.4.34
+       - -e ./submodules/durable/

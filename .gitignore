@@ -1,0 +1,42 @@
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+
+# Temporary files
+run_bertel.ipynb
+src/durable_replication.egg-info/
+
+# Local envrc file
+*envrc
+
+# Python cache
+__pycache__/
+.idea/
+.DS_Store
+.pytest_cache
+.conda
+
+# Large files
+dta_and_likelihood.mat
+sim_data.pkl
+analysis/logit/*.txt
+analysis/pddr_on_real_data/data/*
+analysis/logit/monte_carlo/sim_data/*
+*.csv
+intermediate_params.pkl
+
+
+
+data_table.mat
+*.parquet
+gradients_ll.mat
+acc_0.mat
+acc_a.mat
+it_1.pkl
+mum.mat
+psych_*.mat
+u_*.mat
+jax_to_mat/
+nan_params.pkl
+analysis/estimation/data/*pkl
+model_solution*.pkl
