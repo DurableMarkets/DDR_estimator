@@ -40,3 +40,4 @@ jax_to_mat/
 nan_params.pkl
 analysis/estimation/data/*pkl
 model_solution*.pkl
+**.egg-info/

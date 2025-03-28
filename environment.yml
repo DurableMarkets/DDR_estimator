@@ -10,7 +10,6 @@ dependencies:
   # Testing infrastructure
   - pytest
   - pytest-cov
-  - pytest-xdist
 
   # Tools
   - black
@@ -29,3 +28,4 @@ dependencies:
       - jaxlib
       - jax
       - -e ./submodules/durable/
+      - -e .
