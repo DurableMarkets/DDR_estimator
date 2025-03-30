@@ -9,10 +9,10 @@ sys.path.insert(0, "./monte_carlo/")
 
 TEST_RESOURCES_MODEL_1 = "../../tests/resources/simple_model/matlab_files/"
 import eqb
-import DDR_estimation.model_interface as mi
-import DDR_estimation.pdr_estimation as pdr
-import DDR_estimation.wls_estimation as wls
-import DDR_estimation.utils
+import logit.DDR_estimation.model_interface as mi
+import logit.DDR_estimation.pdr_estimation as pdr
+import logit.DDR_estimation.wls_estimation as wls
+import logit.DDR_estimation.utils
 from scipy.io import loadmat
 import jax
 from tqdm import tqdm
@@ -23,10 +23,10 @@ import os
 
 import matplotlib.pyplot as plt
 import pandas as pd
-from clogit import ccp
-from clogit import clogit
-from clogit import utility
-from generate_explanatory_variables import create_x_matrix
+from logit.monte_carlo.clogit import ccp
+from logit.monte_carlo.clogit import clogit
+from logit.monte_carlo.clogit import utility
+from logit.monte_carlo.generate_explanatory_variables import create_x_matrix
 
 jax.config.update("jax_enable_x64", True)
 

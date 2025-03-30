@@ -1,9 +1,8 @@
 import sys
-breakpoint()
-sys.path.insert(0, "../../src/")
+#sys.path.insert(0, "../../src/")
 # from example_models.jpe_model.params_and_options import update_params_and_options
-import monte_carlo.mctools as mc
-# import DDR_estimation.model_interface as mi
+import logit.monte_carlo.mctools as mc
+import logit.DDR_estimation.model_interface as mi
 # from eqb.process_model_struct import create_model_struct_arrays
 # from eqb.equilibrium import equilibrium_solver
 # import DDR_estimation.utils
@@ -23,7 +22,7 @@ jax.config.update("jax_enable_x64", True)
 pd.set_option("display.max_rows", 705)
 
 # set output directory
-out_dir = "./results/wls monte carlo runs/linear specification/"
+out_dir = "./results/wls monte carlo runs/linear specification/test/"
 
 # Set options
 
@@ -91,7 +90,7 @@ params, options = jpe_model["update_params_and_options"](
 
 # Simulate data or load data
 
-datapath = "./monte_carlo/sim_data/"
+datapath = "./sim_data/"
 (
     equ_output,
     df,

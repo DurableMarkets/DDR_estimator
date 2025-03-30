@@ -16,6 +16,9 @@ __pycache__/
 .pytest_cache
 .conda
 
+# data folders
+sim_data/
+
 # Large files
 dta_and_likelihood.mat
 sim_data.pkl

@@ -1,8 +1,8 @@
 import jax.numpy as jnp
-import model_interface as mi
+import logit.DDR_estimation.model_interface as mi
 import numpy as np
 import pandas as pd
-from jpe_model.laws_of_motion import calc_accident_probability
+from example_models.jpe_model.laws_of_motion import calc_accident_probability
 
 
 def create_tab_index(state_decision_arrays, options):
