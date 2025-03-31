@@ -27,7 +27,7 @@ dependencies:
 
    # JAX
   - pip:
-      - jaxlib
-      - jax
+      - jaxlib==0.4.26
+      - jax==0.4.26
       - -e ./submodules/durable/
       - -e .
