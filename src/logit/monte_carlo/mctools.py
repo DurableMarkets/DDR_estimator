@@ -28,6 +28,11 @@ from logit.monte_carlo.clogit import clogit
 from logit.monte_carlo.clogit import utility
 from logit.monte_carlo.generate_explanatory_variables import create_x_matrix
 
+from eqb.equilibrium import (
+     create_structure_and_solve_model,
+     create_model_struct_arrays,
+     equilibrium_solver
+)
 jax.config.update("jax_enable_x64", True)
 
 
@@ -46,7 +51,7 @@ def construct_price_dict(equ_price, state_space_arrays, params, options):
     return prices
 
 
-def load_or_simulate_data(params, options, sim_options, datadir):
+def load_or_simulate_data(params, options, model_funcs, sim_options, datadir):
     # search for existing datasets
     files = os.listdir(datadir)
 
@@ -143,7 +148,7 @@ def load_or_simulate_data(params, options, sim_options, datadir):
             params,
             options,
             model_struct_arrays,
-        ) = solve_and_simulate_data_jax(params, options, sim_options)
+        ) = solve_and_simulate_data_jax(params, options, model_funcs, sim_options)
 
         # Save the data
         print("Simulation done. Dumping data now..")
@@ -183,10 +188,11 @@ def solve_and_simulate_data(params, options, sim_options):
     return equ_output, df, params, options, model_struct_arrays
 
 
-def solve_and_simulate_data_jax(params, options, sim_options):
-    params, options = update_params_and_options(params=params, options=options)
+def solve_and_simulate_data_jax(params, options, model_funcs, sim_options):
+    # seems redundant?
+    params, options=model_funcs['update_params_and_options'](params=params, options=options)
+    model_struct_arrays = create_model_struct_arrays(options=options, model_funcs=model_funcs)
 
-    model_struct_arrays = create_model_struct_arrays(options=options)
 
     # Solve the model
     equ_output = jax.jit(
@@ -194,6 +200,7 @@ def solve_and_simulate_data_jax(params, options, sim_options):
             params=params_dict,
             options=options,
             model_struct_arrays=model_struct_arrays,
+            model_funcs = model_funcs,
         )
     )(
         params,

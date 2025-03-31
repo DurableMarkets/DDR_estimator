@@ -74,7 +74,7 @@ Nbars = jnp.array([N_mc])
 # update options and params with number of consumers and car types
 params_update = {
     "p_fuel": [0.0],
-    "acc_0": [-100],
+    "acc_0": [-100.0],
     "mum": [0.5, 0.5],
 }
 options_update = {
@@ -87,7 +87,7 @@ options_update = {
 params, options = jpe_model["update_params_and_options"](
     params=params_update, options=options_update
 )
-
+breakpoint()
 # Simulate data or load data
 
 datapath = "./sim_data/"
@@ -98,7 +98,7 @@ datapath = "./sim_data/"
     options,
     fsim_options,
     model_struct_arrays,
-) = mc.load_or_simulate_data(params, options, sim_options, datapath)
+) = mc.load_or_simulate_data(params, options, jpe_model, sim_options, datapath)
 #
 # for key in model_struct_arrays.keys():
 #     model_struct_arrays[key] = np.array(model_struct_arrays[key])

@@ -17,7 +17,7 @@ __pycache__/
 .conda
 
 # data folders
-sim_data/
+sim_data/.
 
 # Large files
 dta_and_likelihood.mat
