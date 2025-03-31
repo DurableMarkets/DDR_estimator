@@ -33,6 +33,9 @@ from eqb.equilibrium import (
      create_model_struct_arrays,
      equilibrium_solver
 )
+
+from eqb.simulate import simulate_with_solution_jax
+
 jax.config.update("jax_enable_x64", True)
 
 
@@ -69,12 +72,11 @@ def load_or_simulate_data(params, options, model_funcs, sim_options, datadir):
         # load data
         with open(fpath, "rb") as f:
             (
-                fequ_output,
+                fmodel_solution,
                 fdf,
                 fparams,
                 foptions,
                 fsim_options,
-                fmodel_struct_arrays,
             ) = pickle.load(f)
 
         # check if params and options matches existing data
@@ -105,15 +107,15 @@ def load_or_simulate_data(params, options, model_funcs, sim_options, datadir):
             sim_options["estimation_size"] % fsim_options["chunk_size"] == 0
         )
 
-        # check if num_agents  are the same:
+        # check if n_agents  are the same:
         sim_check = np.all(
-            np.array([fsim_options[opt] == sim_options[opt] for opt in ["num_periods"]])
+            np.array([fsim_options[opt] == sim_options[opt] for opt in ["n_periods"]])
         )
 
         # check if the maximum number of observations are in the existing dataset.
         size_check = (
-            sim_options["num_agents"] * sim_options["num_periods"]
-            <= fsim_options["num_agents"] * fsim_options["num_periods"]
+            sim_options["n_agents"] * sim_options["n_periods"]
+            <= fsim_options["n_agents"] * fsim_options["n_periods"]
         )
 
         checks_passed = same_model_check & divisible_check & sim_check & size_check
@@ -127,23 +129,23 @@ def load_or_simulate_data(params, options, model_funcs, sim_options, datadir):
     if checks_passed:
         print(
             "Found a file with matching parameters and options. You requested {:,.0f} thousand obs. and file contain {:,.0f} thousand obs.".format(
-                sim_options["num_agents"] * sim_options["num_periods"] / 1000,
-                fsim_options["num_agents"] * fsim_options["num_periods"] / 1000,
+                sim_options["n_agents"] * sim_options["n_periods"] / 1000,
+                fsim_options["n_agents"] * fsim_options["n_periods"] / 1000,
             )
         )
 
         print("Loading data...")
-        equ_output = fequ_output
+        model_solution = fmodel_solution
         df = fdf
         params = fparams
         options = foptions
         sim_options = fsim_options
-        model_struct_arrays = fmodel_struct_arrays
+        model_struct_arrays=create_model_struct_arrays(options, model_funcs)
         pass  # data is already loaded
     else:
         print("No file with matching parameters and options found. Simulating data...")
         (
-            equ_output,
+            model_solution,
             df,
             params,
             options,
@@ -152,12 +154,13 @@ def load_or_simulate_data(params, options, model_funcs, sim_options, datadir):
 
         # Save the data
         print("Simulation done. Dumping data now..")
-        with open(datadir + "/data.pkl", "wb") as f:
+        breakpoint()
+        with open(datadir + "data.pkl", "wb") as f:
             pickle.dump(
-                (equ_output, df, params, options, sim_options, model_struct_arrays), f
+                (model_solution, df, params, options, sim_options), f
             )
 
-    return equ_output, df, params, options, sim_options, model_struct_arrays
+    return model_solution, df, params, options, sim_options, model_struct_arrays
 
 
 def solve_and_simulate_data(params, options, sim_options):
@@ -166,7 +169,7 @@ def solve_and_simulate_data(params, options, sim_options):
     model_struct_arrays = create_model_struct_arrays(options=options)
 
     # Solve the model
-    equ_output = jax.jit(
+    model_solution = jax.jit(
         lambda params_dict: equilibrium_solver(
             params=params_dict,
             options=options,
@@ -178,14 +181,14 @@ def solve_and_simulate_data(params, options, sim_options):
 
     # Simulate data
     df = simulate_data(
-        equ_output=equ_output,
+        model_solution=model_solution,
         options=options,
         params=params,
         sim_options=sim_options,
         state_space_arrays=model_struct_arrays,
     )
 
-    return equ_output, df, params, options, model_struct_arrays
+    return model_solution, df, params, options, model_struct_arrays
 
 
 def solve_and_simulate_data_jax(params, options, model_funcs, sim_options):
@@ -195,7 +198,7 @@ def solve_and_simulate_data_jax(params, options, model_funcs, sim_options):
 
 
     # Solve the model
-    equ_output = jax.jit(
+    model_solution = jax.jit(
         lambda params_dict: equilibrium_solver(
             params=params_dict,
             options=options,
@@ -208,14 +211,15 @@ def solve_and_simulate_data_jax(params, options, model_funcs, sim_options):
 
     # Simulate data
     df = simulate_data_jax(
-        equ_output=equ_output,
-        options=options,
-        params=params,
+        model_solution=model_solution, 
+        model_struct_arrays=model_struct_arrays, 
+        model_funcs=model_funcs, 
+        params=params, 
+        options=options, 
         sim_options=sim_options,
-        state_space_arrays=model_struct_arrays,
     )
 
-    return equ_output, df, params, options, model_struct_arrays
+    return model_solution, df, params, options, model_struct_arrays
 
 
 def obs_to_counts_jax(
@@ -254,11 +258,11 @@ def obs_to_counts_jax(
 
 
 def simulate_chunk_jax(
-    equ_output,
-    options,
+    model_solution,
     sim_options,
     sim_options_chunk,
-    state_space_arrays,
+    model_struct_arrays,
+    model_funcs,
     seed,
     indexer,
     consumer_idxs,
@@ -267,10 +271,10 @@ def simulate_chunk_jax(
     ncells,
 ):
     partial_sim = lambda seed: simulate_with_solution_jax(
-        model_solution=equ_output,
-        options=options,
+        model_solution=model_solution,
         sim_options=sim_options_chunk,
-        state_space_arrays=state_space_arrays,
+        model_struct_arrays=model_struct_arrays,
+        model_funcs=model_funcs,
         seed=seed,
     )
     # jit_sim = jax.jit(partial_sim)
@@ -290,15 +294,22 @@ def simulate_chunk_jax(
 
 
 # @profile
-def simulate_data_jax(equ_output, state_space_arrays, params, options, sim_options):
+def simulate_data_jax(
+        model_solution, 
+        model_struct_arrays, 
+        model_funcs, 
+        params, 
+        options, 
+        sim_options
+):
     # Does sampling runs to reach the number of requested observations,
     # by chunking the sampling runs into smaller chunks of chunk_size.
     # chunk_size has to be divisible by the number of requested observations
 
-    num_agents = sim_options["num_agents"]
+    n_agents = sim_options["n_agents"]
     chunk_size = sim_options["chunk_size"]
 
-    n_full_chunks, last_chunk_size = divmod(num_agents, chunk_size)
+    n_full_chunks, last_chunk_size = divmod(n_agents, chunk_size)
     if last_chunk_size > 0:
         raise Exception(
             "the number of agents times observations has to be divisible by chunk_size"
@@ -310,8 +321,8 @@ def simulate_data_jax(equ_output, state_space_arrays, params, options, sim_optio
     # jax.jit(simulate_with_solution,) # This would be the way to jit it but I
     # would not work with because sim_options_chunk is one argument.
     sim_options_chunk = {
-        "num_agents": chunk_size,
-        "num_periods": sim_options["num_periods"],
+        "n_agents": chunk_size,
+        "n_periods": sim_options["n_periods"],
     }
 
     dfs = []
@@ -324,11 +335,11 @@ def simulate_data_jax(equ_output, state_space_arrays, params, options, sim_optio
     # Replace with some vector.
 
     # unpack options
-    num_consumer_types = options["num_consumer_types"]
-    num_car_types = options["num_car_types"]
+    num_consumer_types = options["n_consumer_types"]
+    num_car_types = options["n_car_types"]
     max_age_of_car_types = jnp.array(options["max_age_of_car_types"])
-    num_states = state_space_arrays["state_space"].shape[0]
-    num_decisions = state_space_arrays["decision_space"].shape[0]
+    num_states = model_struct_arrays["state_space"].shape[0]
+    num_decisions = model_struct_arrays["decision_space"].shape[0]
     ncells = num_consumer_types * num_states * num_decisions
     n_shape = (num_consumer_types, num_states, num_decisions)
 
@@ -361,11 +372,11 @@ def simulate_data_jax(equ_output, state_space_arrays, params, options, sim_optio
     decision_idxs = jnp.array(decision_idxs).flatten()
 
     partial_simulate_chunk_jax = lambda seed: simulate_chunk_jax(
-        equ_output=equ_output,
-        options=options,
+        model_solution=model_solution,
         sim_options=sim_options,
         sim_options_chunk=sim_options_chunk,
-        state_space_arrays=state_space_arrays,
+        model_struct_arrays=model_struct_arrays,
+        model_funcs = model_funcs,
         seed=seed,
         indexer=indexer,
         consumer_idxs=consumer_idxs,
@@ -425,15 +436,15 @@ def simulate_data_jax(equ_output, state_space_arrays, params, options, sim_optio
 
 
 # @profile
-def simulate_data(equ_output, state_space_arrays, params, options, sim_options):
+def simulate_data(model_solution, state_space_arrays, params, options, sim_options):
     # Does sampling runs to reach the number of requested observations,
     # by chunking the sampling runs into smaller chunks of chunk_size.
     # chunk_size has to be divisible by the number of requested observations
 
-    num_agents = sim_options["num_agents"]
+    n_agents = sim_options["n_agents"]
     chunk_size = sim_options["chunk_size"]
 
-    n_full_chunks, last_chunk_size = divmod(num_agents, chunk_size)
+    n_full_chunks, last_chunk_size = divmod(n_agents, chunk_size)
     if last_chunk_size > 0:
         raise Exception(
             "the number of agents times observations has to be divisible by chunk_size"
@@ -445,12 +456,12 @@ def simulate_data(equ_output, state_space_arrays, params, options, sim_options):
     # jax.jit(simulate_with_solution,) # This would be the way to jit it but I
     # would not work with because sim_options_chunk is one argument.
     sim_options_chunk = {
-        "num_agents": chunk_size,
-        "num_periods": sim_options["num_periods"],
+        "n_agents": chunk_size,
+        "n_periods": sim_options["n_periods"],
     }
 
     partial_sim = lambda seed: simulate_with_solution_jax(
-        model_solution=equ_output,
+        model_solution=model_solution,
         options=options,
         sim_options=sim_options_chunk,
         state_space_arrays=state_space_arrays,
@@ -499,7 +510,7 @@ def update_sim_index_to_est_index(index, sim_options):
     # index and replacing it with an updated index.
     chunk_size = sim_options["chunk_size"]
     estimation_size = sim_options["estimation_size"]
-    num_agents = sim_options["num_agents"]
+    n_agents = sim_options["n_agents"]
 
     assert np.all(
         index.names == ["chunk_i", "consumer_type", "state_idx", "decision_idx"]
@@ -512,7 +523,7 @@ def update_sim_index_to_est_index(index, sim_options):
     chunk_index_values = index.get_level_values("chunk_i").unique()
     j = 0
 
-    estimation_index = np.arange(num_agents // estimation_size)
+    estimation_index = np.arange(n_agents // estimation_size)
     estimation_index = np.repeat(
         estimation_index, estimation_size // chunk_size
     ).astype(int)
@@ -590,11 +601,11 @@ def calculate_cfps_from_df(df, calc_counts=False):
     return df_freq
 
 
-def true_ccps(equ_output):
+def true_ccps(model_solution):
     assert (
-        equ_output["ccps_tau"].shape[0] == 1
+        model_solution["ccps_tau"].shape[0] == 1
     ), "This function only works for one consumer type"
-    ccps = equ_output["ccps_tau"][0, :, :]
+    ccps = model_solution["ccps_tau"][0, :, :]
 
     return ccps
 
@@ -618,7 +629,7 @@ def calculate_scrap_probabilities(df):
 def estimate_clogit(
     df,
     state_decision_arrays,
-    equ_output,
+    model_solution,
     w_j_vars,
     s_i_vars,
     w_j_deg,
@@ -1353,7 +1364,7 @@ def PDR_regression_experimental(ccps, prices, state_decision_arrays, params, opt
 
 
 def extract_true_structural_parameters(
-    equ_output, state_decision_arrays, params, options
+    model_solution, state_decision_arrays, params, options
 ):
     # unpack state and decision space
     decision_space = state_decision_arrays["decision_space"]
@@ -1427,7 +1438,7 @@ def extract_true_structural_parameters(
         )
 
     # Ev terms
-    ev_terms = equ_output["ev_tau"]
+    ev_terms = model_solution["ev_tau"]
 
     ev_terms = [(i, j, value) for (i, j), value in np.ndenumerate(ev_terms)]
     ev_terms = pd.DataFrame(

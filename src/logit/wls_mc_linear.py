@@ -45,10 +45,10 @@ specification = {
     "u_a_even": None,
 }
 
-# chunk_size and num_periods should be tuned to jax's memory capacity and mc_iter should control the number of observations.
+# chunk_size and n_periods should be tuned to jax's memory capacity and mc_iter should control the number of observations.
 chunk_size = 100_000
 mc_iter = 100
-N_mc = 5_000_000 #5_000_000 
+N_mc = 500_000 #5_000_000 
 sample_iter = N_mc * mc_iter // chunk_size
 
 # Estimation_size controls the sample size used in the estimation
@@ -62,8 +62,8 @@ assert (
 ), "estimation_size should be smaller or equal to chunk_size * mc_iter"
 
 sim_options = {
-    "num_agents": chunk_size * sample_iter,  # 226675,
-    "num_periods": 1,
+    "n_agents": chunk_size * sample_iter,  # 226675,
+    "n_periods": 1,
     "seed": 123,
     "chunk_size": chunk_size,
     "estimation_size": estimation_size,
@@ -81,7 +81,7 @@ params_update = {
     "mum": [0.5, 0.5],
 }
 options_update = {
-    "num_consumer_types": num_consumers,
+    "num_consumer_types": num_consumers, # Redundant
     "num_car_types": num_car_types,
     "max_age_of_car_types": [25],
     "tw": [0.5, 0.5],
@@ -90,9 +90,10 @@ options_update = {
 params, options = jpe_model["update_params_and_options"](
     params=params_update, options=options_update
 )
+
 # Simulate data or load data
 (
-    equ_output,
+    model_solution,
     df,
     params,
     options,

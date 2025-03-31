@@ -33,8 +33,8 @@ num_car_types = 1
 # number of observations used in simulation
 chunk_size = 10000
 sim_options = {
-    "num_agents": chunk_size * 200,  # 226675,
-    "num_periods": 1,
+    "n_agents": chunk_size * 200,  # 226675,
+    "n_periods": 1,
     "seed": 0,
     "chunk_size": chunk_size,
     "use_count_data": True,
@@ -117,7 +117,7 @@ true_ccps = mc.true_ccps(
 )
 ests = []
 # Aggregate over chunks
-# n_full_chunks, last_chunk_size = divmod(sim_options['num_agents'], sim_options['chunk_size'])
+# n_full_chunks, last_chunk_size = divmod(sim_options['n_agents'], sim_options['chunk_size'])
 # chunk_sizes = [sim_options['chunk_size']]*(n_full_chunks)+ ([last_chunk_size] if last_chunk_size > 0 else [])
 
 chunks = df.index.get_level_values("chunk_i").unique()

@@ -22,8 +22,8 @@ num_car_types = 1
 
 # number of observations used in simulation
 sim_options = {
-    "num_agents": 1000000,  # 226675,
-    "num_periods": 1,
+    "n_agents": 1000000,  # 226675,
+    "n_periods": 1,
     "seed": 123,
     "chunk_size": 1000000,
     "use_count_data": True,
