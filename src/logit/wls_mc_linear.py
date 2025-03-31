@@ -14,6 +14,9 @@ from tqdm import tqdm
 import numpy as np
 import eqb
 
+from set_path import get_paths
+
+path_dict = get_paths()
 
 # Load jpe model
 jpe_model = eqb.load_models("jpe_model")
@@ -87,10 +90,7 @@ options_update = {
 params, options = jpe_model["update_params_and_options"](
     params=params_update, options=options_update
 )
-breakpoint()
 # Simulate data or load data
-
-datapath = "./sim_data/"
 (
     equ_output,
     df,
@@ -98,7 +98,7 @@ datapath = "./sim_data/"
     options,
     fsim_options,
     model_struct_arrays,
-) = mc.load_or_simulate_data(params, options, jpe_model, sim_options, datapath)
+) = mc.load_or_simulate_data(params, options, jpe_model, sim_options, path_dict["sim_data"])
 #
 # for key in model_struct_arrays.keys():
 #     model_struct_arrays[key] = np.array(model_struct_arrays[key])
