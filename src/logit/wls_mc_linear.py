@@ -89,7 +89,7 @@ options_update = {
 params, options = jpe_model["update_params_and_options"](
     params=params_update, options=options_update
 )
-
+breakpoint()
 # Simulate data or load data
 (
     model_solution,
