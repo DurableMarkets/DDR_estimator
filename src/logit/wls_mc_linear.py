@@ -86,7 +86,6 @@ options_update = {
     "max_age_of_car_types": [25],
     "tw": [0.5, 0.5],
 }
-
 params, options = jpe_model["update_params_and_options"](
     params=params_update, options=options_update
 )
@@ -100,40 +99,42 @@ params, options = jpe_model["update_params_and_options"](
     fsim_options,
     model_struct_arrays,
 ) = mc.load_or_simulate_data(params, options, jpe_model, sim_options, path_dict["sim_data"])
-#
-# for key in model_struct_arrays.keys():
-#     model_struct_arrays[key] = np.array(model_struct_arrays[key])
-#
+
+
+for key in model_struct_arrays.keys():
+    model_struct_arrays[key] = np.array(model_struct_arrays[key])
+
 # # create a dict of prices
-# prices = mc.construct_price_dict(
-#     equ_price=equ_output["equilibrium_prices"],
-#     state_space_arrays=model_struct_arrays,
-#     params=params,
-#     options=options,
-# )
-#
+prices = mc.construct_price_dict(
+    equ_price=model_solution["equ_prices"],
+    state_space_arrays=model_struct_arrays,
+    params=params,
+    options=options,
+)
+breakpoint()
+
 # # creating variables that are independent of the sample and only depend on model structure:
-# tab_index = utils.create_tab_index(model_struct_arrays, options)
+tab_index = utils.create_tab_index(model_struct_arrays, options)
 #
 # # creating feasibility index
-# I_feasible = mi.feasible_choice_all(
-#     tab_index.get_level_values("state").values,
-#     tab_index.get_level_values("decision").values,
-#     state_decision_arrays=model_struct_arrays,
-#     params=params,
-#     options=options,
-# )
-#
+I_feasible = mi.feasible_choice_all(
+    tab_index.get_level_values("state").values,
+    tab_index.get_level_values("decision").values,
+    state_decision_arrays=model_struct_arrays,
+    params=params,
+    options=options,
+)
+
 # # creating data independent regressors
-# X_indep, model_specification = utils.create_data_independent_regressors(
+#X_indep, model_specification = utils.create_data_independent_regressors(
 #     tab_index=tab_index,
 #     prices=prices,
 #     state_decision_arrays=model_struct_arrays,
 #     params=params,
 #     options=options,
 #     specification=specification,
-# )
-#
+#)
+
 # # mc simulation
 # ests = []
 # df_idx = df.index

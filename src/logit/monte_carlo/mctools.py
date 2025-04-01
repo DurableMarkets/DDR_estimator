@@ -154,7 +154,6 @@ def load_or_simulate_data(params, options, model_funcs, sim_options, datadir):
 
         # Save the data
         print("Simulation done. Dumping data now..")
-        breakpoint()
         with open(datadir + "data.pkl", "wb") as f:
             pickle.dump(
                 (model_solution, df, params, options, sim_options), f
