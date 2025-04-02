@@ -1,6 +1,7 @@
 import sys
 #sys.path.insert(0, "../../src/")
 # from example_models.jpe_model.params_and_options import update_params_and_options
+import logit.ddr_tools.main_index as main_index
 import logit.monte_carlo.mctools as mc
 import logit.DDR_estimation.model_interface as mi
 # from eqb.process_model_struct import create_model_struct_arrays
@@ -80,16 +81,16 @@ params_update = {
     "acc_0": [-100.0],
     "mum": [0.5, 0.5],
 }
+
 options_update = {
-    "num_consumer_types": num_consumers, # Redundant
-    "num_car_types": num_car_types,
+    "n_consumer_types": num_consumers, # Redundant
+    "n_car_types": num_car_types,
     "max_age_of_car_types": [25],
     "tw": [0.5, 0.5],
 }
 params, options = jpe_model["update_params_and_options"](
     params=params_update, options=options_update
 )
-breakpoint()
 # Simulate data or load data
 (
     model_solution,
@@ -111,29 +112,41 @@ prices = mc.construct_price_dict(
     params=params,
     options=options,
 )
-breakpoint()
 
 # # creating variables that are independent of the sample and only depend on model structure:
-tab_index = utils.create_tab_index(model_struct_arrays, options)
+#tab_index = create_tab_index(model_struct_arrays, options)
 #
 # # creating feasibility index
-I_feasible = mi.feasible_choice_all(
-    tab_index.get_level_values("state").values,
-    tab_index.get_level_values("decision").values,
+#I_feasible = create_feasible_choice_indexer(
+#    tab_index.get_level_values("state").values,
+#    tab_index.get_level_values("decision").values,
+#    state_decision_arrays=model_struct_arrays,
+#    params=params,
+#    options=options,
+#)
+
+feasible_idx=main_index.create_main_feasible_idx(
+    model_struct_arrays=model_struct_arrays,
+    params=params,
+    options=options, 
+)
+
+# TESTING HERE
+#from logit.ddr_tools.iota_space import create_state_transition_matrix_test
+#create_state_transition_matrix_test(feasible_idx,model_struct_arrays, jpe_model, params, options)
+from logit.ddr_tools.iota_space import create_iota_df
+test_df=create_iota_df(feasible_idx, model_struct_arrays, jpe_model, params, options)
+
+# creating data independent regressors
+X_indep, model_specification = utils.create_data_independent_regressors(
+    tab_index=tab_index,
+    prices=prices,
     state_decision_arrays=model_struct_arrays,
     params=params,
     options=options,
+    specification=specification,
 )
 
-# # creating data independent regressors
-#X_indep, model_specification = utils.create_data_independent_regressors(
-#     tab_index=tab_index,
-#     prices=prices,
-#     state_decision_arrays=model_struct_arrays,
-#     params=params,
-#     options=options,
-#     specification=specification,
-#)
 
 # # mc simulation
 # ests = []
