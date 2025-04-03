@@ -1,5 +1,49 @@
 import numpy as np
 import pandas as pd
+
+def create_main_df(model_struct_arrays, params, options):
+    
+    feasible_idx=create_main_feasible_idx(
+        model_struct_arrays=model_struct_arrays,
+        params=params,
+        options=options,
+    )
+
+    main_df = pd.DataFrame(
+        index=feasible_idx,
+    )
+
+    main_df['car_type_state'] = model_struct_arrays['state_space'][
+        main_df.index.get_level_values("state").values, 0]
+    main_df['car_age_state'] = model_struct_arrays['state_space'][
+        main_df.index.get_level_values("state").values, 1]
+
+    main_df["post_decision_state_idx"]  = model_struct_arrays['post_decision_state_idxs'][
+        main_df.index.get_level_values("state").values,
+        main_df.index.get_level_values("decision").values]
+    
+    # Very wierd behaviour that must be a bug. dict within an array...
+    post_decision_state_dict=model_struct_arrays['post_decision_states_dict'].flatten()[0]
+
+    main_df['car_type_post_decision'] =post_decision_state_dict['car_type_post_decision'][
+        main_df['post_decision_state_idx'].values]
+
+    main_df['car_age_post_decision'] = post_decision_state_dict['car_age_post_decision'][
+        main_df['post_decision_state_idx'].values]
+    
+    main_df = main_df.reset_index(drop=False).set_index(
+        ["tau", "decision", "state", 'car_type_post_decision', "car_age_post_decision"]
+    , drop=False)
+    
+    breakpoint()
+    main_df = main_df.loc[:, ['car_type_state', 'car_age_state',
+       'car_type_post_decision', 'car_age_post_decision']]
+
+    return main_df
+
+
+
+
 def create_main_feasible_idx(model_struct_arrays, params, options):
 
     tab_idx = create_tab_index(
@@ -14,6 +58,7 @@ def create_main_feasible_idx(model_struct_arrays, params, options):
     params=params,
     options=options,
     )
+
     return tab_idx[feasible_states]
 
 def create_tab_index(model_struct_arrays, options):

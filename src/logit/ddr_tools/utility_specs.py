@@ -65,12 +65,6 @@ def create_u_0(
         "u_0", "car_type_{}_{}", specification, options
     )
 
-    # Setting new index locally
-    main_df = main_df.reset_index().set_index(
-        ["tau", "decision", "state", 'car_type_post_decision', "car_age_post_decision"]
-    )
-    main_df['car_type_post_decision'] = main_df.index.get_level_values('car_type_post_decision').astype(int)
-
     # u_0 dummies
     car_type_dummies = pd.get_dummies(main_df["car_type_post_decision"], prefix="car_type")[
         ["car_type_{}".format(i) for i in range(1, options["n_car_types"] + 1)]
@@ -103,44 +97,29 @@ def create_u_a(
     if specification['u_a'] is None:
         return None, None
         
-    ntypes, ncartypes = specification['u_a']
-    
     # Constructing the columns
-    car_type_cols, car_type_cols_flatten = utility_helpers.construct_utility_colnames(
-        "u_a", "car_type_{}_x_age_{}", specification, options
+    car_type_cols, car_type_cols_flatten, car_type_cols_looper = utility_helpers.construct_utility_colnames(
+        "u_a", "car_type_{}_{}", specification, options
     )
 
     # u_0 dummies
     car_type_dummies = pd.get_dummies(main_df["car_type_post_decision"], prefix="car_type")[
         ["car_type_{}".format(i) for i in range(1, options["n_car_types"] + 1)]
     ]  # Dropping the "no car" car type
-    breakpoint()
+
     X = pd.DataFrame(
         np.nan,
         index=main_df.index,
         columns=car_type_cols_flatten,
     )
-    # Problem: If ntypes = 1 and there is in fact multiple consumer types then I'm only setting on one consumer type...
-    # Problem: if ncartypes=1 and there is is in fact multiple then I'm only setting on the first car type...
-    # Problem: I think all the car types are being overruled here when ncartypes=1, 
-    # all three problems are related 
-    # I could create a n_consumer_types x n_car_types matrix that included the index to the car type and consumer type
-    # Then I could loop over these objects and use the values within to index over the loop. 
-    #  Something along the lines of 
-    #index_car, index_consumer that depended on the specification object. 
-    #Then I could use these to set the values in the x matrix. 
-    
-    # since I'm setting into the same column with different dummies 
-    # Adding u_a
-    n_car_types, n_consumer_types = options['n_car_types'], options['n_consumer_types'] 
-    # I could always loop over the n_consumer_types and n_car_types, and then use the other 
-    for ntype in range(0, ntypes):
-        for ncartype in range(1, ncartypes+1):
+
+    for ntype in range(0, options["n_consumer_types"]):
+        for ncartype in range(1, options['n_car_types']+1):
             X.loc[
-                pd.IndexSlice[ntype, :, :], car_type_cols[ntype][ncartype-1]
+                pd.IndexSlice[ntype, :, :, ncartype, :], car_type_cols_looper[ntype][ncartype-1]
             ] = (
-                car_type_dummies.loc[pd.IndexSlice[ntype, :, :], f'car_type_{ncartype}'].values * 
-                main_df.loc[pd.IndexSlice[ntype, :, :],"car_age_post_decision"].values                
+                car_type_dummies.loc[pd.IndexSlice[ntype, :, : , ncartype, :], f'car_type_{ncartype}'].values * 
+                main_df.loc[pd.IndexSlice[ntype, :, :, ncartype, :],"car_age_post_decision"].values                
             )
     # The best solution would be if the label from the car_type_cols was controlling where to set the values.
     breakpoint()

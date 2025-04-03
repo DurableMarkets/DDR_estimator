@@ -1,7 +1,6 @@
-import sys
-#sys.path.insert(0, "../../src/")
-# from example_models.jpe_model.params_and_options import update_params_and_options
 import logit.ddr_tools.main_index as main_index
+import logit.ddr_tools.regressors as regressors
+
 import logit.monte_carlo.mctools as mc
 import logit.DDR_estimation.model_interface as mi
 # from eqb.process_model_struct import create_model_struct_arrays
@@ -40,7 +39,7 @@ specification = {
     "mum": (num_consumers, 1),
     "buying": (num_consumers, 1),
     "scrap_correction": (num_consumers, 1),
-    "u_0": (num_consumers, num_car_types),
+    "u_0": (num_consumers, 1),
     "u_a": (num_consumers, num_car_types),
     "u_a_sq": None,
     "u_a_even": None,
@@ -113,39 +112,24 @@ prices = mc.construct_price_dict(
     options=options,
 )
 
-# # creating variables that are independent of the sample and only depend on model structure:
-#tab_index = create_tab_index(model_struct_arrays, options)
-#
-# # creating feasibility index
-#I_feasible = create_feasible_choice_indexer(
-#    tab_index.get_level_values("state").values,
-#    tab_index.get_level_values("decision").values,
-#    state_decision_arrays=model_struct_arrays,
-#    params=params,
-#    options=options,
-#)
 
-feasible_idx=main_index.create_main_feasible_idx(
-    model_struct_arrays=model_struct_arrays,
-    params=params,
-    options=options, 
+main_df = main_index.create_main_df(
+        model_struct_arrays=model_struct_arrays,
+        params=params,
+        options=options,
 )
 
-# TESTING HERE
-#from logit.ddr_tools.iota_space import create_state_transition_matrix_test
-#create_state_transition_matrix_test(feasible_idx,model_struct_arrays, jpe_model, params, options)
-from logit.ddr_tools.iota_space import create_iota_df
-test_df=create_iota_df(feasible_idx, model_struct_arrays, jpe_model, params, options)
-
 # creating data independent regressors
-X_indep, model_specification = utils.create_data_independent_regressors(
-    tab_index=tab_index,
+X_indep, model_specification = regressors.create_data_independent_regressors(
+    main_df=main_df,
     prices=prices,
-    state_decision_arrays=model_struct_arrays,
+    model_struct_arrays=model_struct_arrays,
+    model_funcs = jpe_model,
     params=params,
     options=options,
     specification=specification,
 )
+breakpoint()
 
 
 # # mc simulation
