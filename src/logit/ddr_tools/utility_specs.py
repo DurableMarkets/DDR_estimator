@@ -4,7 +4,7 @@ import numpy as np
 
 
 def create_buying(
-    tab_index,
+    main_df,
     model_struct_arrays,
     params,
     options,
@@ -13,35 +13,25 @@ def create_buying(
     decision_space = model_struct_arrays["decision_space"]
 
     # Constructing the columns
-    buying_cols, buying_cols_flatten = utility_helpers.construct_utility_colnames(
+    buying_cols, buying_cols_flatten, cols_looper = utility_helpers.construct_utility_colnames(
         "buying", "buying_{}_{}", specification, options
     )
+    decisions = main_df.index.get_level_values("decision").values 
 
-    decision_state_index = tab_index.index
-
-    # Initialize X
-    X = pd.DataFrame(
+    helper_df = pd.DataFrame(
         np.nan,
-        index=tab_index.index,
+        index=main_df.index,
         columns=buying_cols_flatten,
     )
 
-    decision_state_pairs_X = tab_index.reset_index()[
-        ["decision", "state"]
-    ].values  # will be used for looping
+    X = pd.DataFrame(
+        np.nan,
+        index=main_df.index,
+        columns=buying_cols_flatten,
+    )
+    helper_df["d_own"] = decision_space[decisions, 0]
+    helper_df["dum_buy"] = helper_df["d_own"] == 2 # buy car
 
-    # We're going to repeat for all consumer types so we only need to do it for one
-    tab_index = tab_index.loc[0, :, :]
-
-    Z = flow_utility_post_decision_df(tab_index, model_struct_arrays)
-
-    decision_state_pairs = tab_index.reset_index()[
-        ["decision", "state"]
-    ].values  # will be used for looping
-
-    didx_vec = decision_state_pairs[:, 0]
-    Z["d_own"] = decision_space[didx_vec, 0]
-    Z["dum_buy"] = Z["d_own"] == 2
 
     # Adding buying
     nconsumers, ncartypes = specification["buying"]
@@ -50,359 +40,194 @@ def create_buying(
             "Excluding transaction costs are not implemented yet."
         )
     elif (nconsumers == 1) & (ncartypes == 1):
-        # sets the same dummies num_consumer_types many times (in the same column)
-        for ntype in range(0, options["num_consumer_types"]):
-            X.loc[pd.IndexSlice[ntype, :, :], buying_cols] = Z["dum_buy"].values
+        X.loc[:, buying_cols] = helper_df["dum_buy"].values
     elif (nconsumers > 1) & (ncartypes == 1):
-        for ntype in range(0, options["num_consumer_types"]):
-            X.loc[pd.IndexSlice[ntype, :, :], buying_cols[ntype]] = Z["dum_buy"].values
+        for ntype in range(0, nconsumers):
+            X.loc[pd.IndexSlice[ntype, :, :], buying_cols[ntype]] = helper_df.loc[pd.IndexSlice[ntype, :, :],'dum_buy'].values
     else:
         raise NotImplementedError(
-            "Psych transactions costs are only allowed to vary with consumer type, not car type."
+            "transactions costs are only allowed to vary with consumer type, not car type."
         )
-
-    # remove infeasible states
-    I_feasible = mi.feasible_choice_all(
-        decision_state_pairs_X[:, 1],
-        decision_state_pairs_X[:, 0],
-        model_struct_arrays=model_struct_arrays,
-        params=params,
-        options=options,
-    )
-
-    # remove from X
-    X = X.loc[np.array(I_feasible), :]
-
     return X, buying_cols_flatten
 
 def create_u_0(
-    tab_index,
+    main_df,
     model_struct_arrays,
     params,
     options,
     specification,
 ):
+    if specification['u_0'] is None:
+        return None, None
+        
     # Constructing the columns
-    car_type_cols, car_type_cols_flatten = utility_helpers.construct_utility_colnames(
+    car_type_cols, car_type_cols_flatten, car_type_cols_looper = utility_helpers.construct_utility_colnames(
         "u_0", "car_type_{}_{}", specification, options
     )
 
-    decision_state_index = tab_index.index
-
-    Z = flow_utility_post_decision_df(tab_index.loc[0, :, :], model_struct_arrays)
+    # Setting new index locally
+    main_df = main_df.reset_index().set_index(
+        ["tau", "decision", "state", 'car_type_post_decision', "car_age_post_decision"]
+    )
+    main_df['car_type_post_decision'] = main_df.index.get_level_values('car_type_post_decision').astype(int)
 
     # u_0 dummies
-    car_type_dummies = pd.get_dummies(Z["post_s_type"], prefix="car_type")[
-        ["car_type_{}".format(i) for i in range(1, options["num_car_types"] + 1)]
+    car_type_dummies = pd.get_dummies(main_df["car_type_post_decision"], prefix="car_type")[
+        ["car_type_{}".format(i) for i in range(1, options["n_car_types"] + 1)]
     ]  # Dropping the "no car" car type
 
     X = pd.DataFrame(
         np.nan,
-        index=decision_state_index,
+        index=main_df.index,
         columns=car_type_cols_flatten,
     )
 
-    # Adding u_0
-    if specification["u_0"] is None:
-        car_type_dummies = []
-    elif specification["u_0"][1] == 1:
-        car_type_dummies = car_type_dummies.sum(axis=1)
-    else:
-        pass
-
-    ntypes = len(car_type_cols)
     for ntype in range(0, options["n_consumer_types"]):
-        if ntypes == 1:
+        for ncartype in range(1, options['n_car_types']+1):
             X.loc[
-                pd.IndexSlice[ntype, :, :], car_type_cols[0]
-            ] = car_type_dummies.values
-        else:
-            X.loc[
-                pd.IndexSlice[ntype, :, :], car_type_cols[ntype]
-            ] = car_type_dummies.values
-
-    # FIXME: SUPER ANNOYING to do this here instead of just removing them directly from the index.
-    decision_state_pairs = X.reset_index()[["decision", "state"]].values
-    I_feasible = mi.feasible_choice_all(
-        decision_state_pairs[:, 1],
-        decision_state_pairs[:, 0],
-        model_struct_arrays=model_struct_arrays,
-        params=params,
-        options=options,
-    )
-
-    # For some reason a jax array of booleans cannot index a pandas dataframe, so I have to do this dumb conversion to numpy
-    X = X.loc[np.array(I_feasible), :]
+                pd.IndexSlice[ntype, :, :, ncartype, :], car_type_cols_looper[ntype][ncartype-1]
+            ] = (
+                car_type_dummies.loc[pd.IndexSlice[ntype, :, :, ncartype, :], f'car_type_{ncartype}'].values.astype(int)
+)
 
     return X, car_type_cols_flatten
 
 
 def create_u_a(
-    tab_index,
+    main_df,
     model_struct_arrays,
     params,
     options,
     specification,
 ):
+    if specification['u_a'] is None:
+        return None, None
+        
+    ntypes, ncartypes = specification['u_a']
+    
     # Constructing the columns
     car_type_cols, car_type_cols_flatten = utility_helpers.construct_utility_colnames(
         "u_a", "car_type_{}_x_age_{}", specification, options
     )
 
-    decision_state_index = tab_index.index
-
-    Z = flow_utility_post_decision_df(tab_index.loc[0, :, :], model_struct_arrays)
-
     # u_0 dummies
-    car_type_dummies = pd.get_dummies(Z["post_s_type"], prefix="car_type")[
-        ["car_type_{}".format(i) for i in range(1, options["num_car_types"] + 1)]
+    car_type_dummies = pd.get_dummies(main_df["car_type_post_decision"], prefix="car_type")[
+        ["car_type_{}".format(i) for i in range(1, options["n_car_types"] + 1)]
     ]  # Dropping the "no car" car type
-
-    car_type_dummies_x_age = car_type_dummies.values * Z["post_s_age"].values.reshape(
-        -1, 1
-    )
-
+    breakpoint()
     X = pd.DataFrame(
         np.nan,
-        index=decision_state_index,
+        index=main_df.index,
         columns=car_type_cols_flatten,
     )
+    # Problem: If ntypes = 1 and there is in fact multiple consumer types then I'm only setting on one consumer type...
+    # Problem: if ncartypes=1 and there is is in fact multiple then I'm only setting on the first car type...
+    # Problem: I think all the car types are being overruled here when ncartypes=1, 
+    # all three problems are related 
+    # I could create a n_consumer_types x n_car_types matrix that included the index to the car type and consumer type
+    # Then I could loop over these objects and use the values within to index over the loop. 
+    #  Something along the lines of 
+    #index_car, index_consumer that depended on the specification object. 
+    #Then I could use these to set the values in the x matrix. 
+    
+    # since I'm setting into the same column with different dummies 
     # Adding u_a
-    if specification["u_a"] is None:
-        car_type_dummies_x_age = []
-    elif specification["u_a"][1] == 1:
-        car_type_dummies_x_age = car_type_dummies_x_age.sum(axis=1)
-    else:
-        pass
-
-    ntypes = len(car_type_cols)
-    for ntype in range(0, options["num_consumer_types"]):
-        if ntypes == 1:
-            X.loc[pd.IndexSlice[ntype, :, :], car_type_cols[0]] = car_type_dummies_x_age
-        elif ntypes > 1:
+    n_car_types, n_consumer_types = options['n_car_types'], options['n_consumer_types'] 
+    # I could always loop over the n_consumer_types and n_car_types, and then use the other 
+    for ntype in range(0, ntypes):
+        for ncartype in range(1, ncartypes+1):
             X.loc[
-                pd.IndexSlice[ntype, :, :], car_type_cols[ntype]
-            ] = car_type_dummies_x_age
-
-    # FIXME: SUPER ANNOYING to do this here instead of just removing them directly from the index.
-    decision_state_pairs = X.reset_index()[["decision", "state"]].values
-    I_feasible = mi.feasible_choice_all(
-        decision_state_pairs[:, 1],
-        decision_state_pairs[:, 0],
-        model_struct_arrays=model_struct_arrays,
-        params=params,
-        options=options,
-    )
-
-    # For some reason a jax array of booleans cannot index a pandas dataframe, so I have to do this dumb conversion to numpy
-    X = X.loc[np.array(I_feasible), :]
+                pd.IndexSlice[ntype, :, :], car_type_cols[ntype][ncartype-1]
+            ] = (
+                car_type_dummies.loc[pd.IndexSlice[ntype, :, :], f'car_type_{ncartype}'].values * 
+                main_df.loc[pd.IndexSlice[ntype, :, :],"car_age_post_decision"].values                
+            )
+    # The best solution would be if the label from the car_type_cols was controlling where to set the values.
+    breakpoint()
+    # always index over options object to make sure nothing is skipped
+    # Then I need some solution to make sure that I do not skip anything.
 
     return X, car_type_cols_flatten
 
 
 def create_u_a_sq(
-    tab_index,
+    main_df,
     model_struct_arrays,
     params,
     options,
     specification,
 ):
+    if specification['u_a_sq'] is None:
+        return None, None
+
+    ntypes, ncartypes = specification['u_a_sq']
+
     # Constructing the columns
     car_type_cols, car_type_cols_flatten = utility_helpers.construct_utility_colnames(
         "u_a_sq", "car_type_{}_x_age_sq_{}", specification, options
     )
-
-    decision_state_index = tab_index.index
-
-    Z = flow_utility_post_decision_df(tab_index.loc[0, :, :], model_struct_arrays)
-
     # u_0 dummies
-    car_type_dummies = pd.get_dummies(Z["post_s_type"], prefix="car_type")[
-        ["car_type_{}".format(i) for i in range(1, options["num_car_types"] + 1)]
+    car_type_dummies = pd.get_dummies(main_df["car_type_post_decision"], prefix="car_type")[
+        ["car_type_{}".format(i) for i in range(1, options["n_car_types"] + 1)]
     ]  # Dropping the "no car" car type
-
-    car_type_dummies_x_age_sq = (
-        car_type_dummies.values * Z["post_s_age"].values.reshape(-1, 1) ** 2
-    )
 
     X = pd.DataFrame(
         np.nan,
-        index=decision_state_index,
+        index=main_df.index,
         columns=car_type_cols_flatten,
     )
 
-    # Adding u_a
-    if specification["u_a_sq"] is None:
-        car_type_dummies_x_age_sq = []
-    elif specification["u_a_sq"][1] == 1:
-        car_type_dummies_x_age_sq = car_type_dummies_x_age_sq.sum(axis=1)
-    else:
-        pass
-
-    ntypes = len(car_type_cols)
-    for ntype in range(0, options["num_consumer_types"]):
-        if ntypes == 1:
+    # Adding u_a_sq
+    for ntype in range(0, ntypes):
+        for ncartype in range(1, ncartypes+1):
             X.loc[
-                pd.IndexSlice[ntype, :, :], car_type_cols[0]
-            ] = car_type_dummies_x_age_sq
-        elif ntypes > 1:
-            X.loc[
-                pd.IndexSlice[ntype, :, :], car_type_cols[ntype]
-            ] = car_type_dummies_x_age_sq
-
-    # FIXME: SUPER ANNOYING to do this here instead of just removing them directly from the index.
-    decision_state_pairs = X.reset_index()[["decision", "state"]].values
-    I_feasible = mi.feasible_choice_all(
-        decision_state_pairs[:, 1],
-        decision_state_pairs[:, 0],
-        model_struct_arrays=model_struct_arrays,
-        params=params,
-        options=options,
+                pd.IndexSlice[ntype, :, :], car_type_cols[ntype][ncartype-1]
+            ] = (
+                car_type_dummies.loc[pd.IndexSlice[ntype, :, :], f'car_type_{ncartype}'].values * 
+                main_df.loc[pd.IndexSlice[ntype, :, :],"car_age_post_decision"].values ** 2
     )
-
-    # For some reason a jax array of booleans cannot index a pandas dataframe, so I have to do this dumb conversion to numpy
-    X = X.loc[np.array(I_feasible), :]
-
+    breakpoint()
     return X, car_type_cols_flatten
 
 
 def create_u_a_even(
-    tab_index,
+    main_df,
     model_struct_arrays,
     params,
     options,
     specification,
 ):
+    if specification['u_a_even'] is None:
+        return None, None
+
+    ntypes, ncartypes = specification['u_a_even']
+
     # Constructing the columns
     car_type_cols, car_type_cols_flatten = utility_helpers.construct_utility_colnames(
         "u_a_even", "car_type_{}_x_age_even_{}", specification, options
     )
 
-    decision_state_index = tab_index.index
-
-    Z = flow_utility_post_decision_df(tab_index.loc[0, :, :], model_struct_arrays)
-
     # u_0 dummies
-    car_type_dummies = pd.get_dummies(Z["post_s_type"], prefix="car_type")[
-        ["car_type_{}".format(i) for i in range(1, options["num_car_types"] + 1)]
+    car_type_dummies = pd.get_dummies(main_df["car_type_post_decision"], prefix="car_type")[
+        ["car_type_{}".format(i) for i in range(1, options["n_car_types"] + 1)]
     ]  # Dropping the "no car" car type
-
-    post_s_age = Z["post_s_age"].values.reshape(-1, 1)
-
-    # (1 - car_age % 2) * (car_age >= 4)
-    car_type_dummies_x_age_even = (
-        car_type_dummies.values * (1 - post_s_age % 2) * (post_s_age >= 4)
-    )
 
     X = pd.DataFrame(
         np.nan,
-        index=decision_state_index,
+        index=main_df.index,
         columns=car_type_cols_flatten,
     )
 
     # Adding u_a
-    if specification["u_a_even"] is None:
-        car_type_dummies_x_age_even = []
-    elif specification["u_a_even"][1] == 1:
-        car_type_dummies_x_age_even = car_type_dummies_x_age_even.sum(axis=1)
-    else:
-        pass
-
-    ntypes = len(car_type_cols)
-    for ntype in range(0, options["num_consumer_types"]):
-        if ntypes == 1:
+    for ntype in range(0, ntypes):
+        for ncartype in range(1, ncartypes+1):
+            breakpoint()
+            post_s_age = main_df.loc[pd.IndexSlice[ntype, :, :],"car_age_post_decision"].values
             X.loc[
-                pd.IndexSlice[ntype, :, :], car_type_cols[0]
-            ] = car_type_dummies_x_age_even
-        elif ntypes > 1:
-            X.loc[
-                pd.IndexSlice[ntype, :, :], car_type_cols[ntype]
-            ] = car_type_dummies_x_age_even
-
-    # FIXME: SUPER ANNOYING to do this here instead of just removing them directly from the index.
-    decision_state_pairs = X.reset_index()[["decision", "state"]].values
-    I_feasible = mi.feasible_choice_all(
-        decision_state_pairs[:, 1],
-        decision_state_pairs[:, 0],
-        model_struct_arrays=model_struct_arrays,
-        params=params,
-        options=options,
+                pd.IndexSlice[ntype, :, :], car_type_cols[ntype][ncartype-1]
+            ] = (
+                car_type_dummies.loc[pd.IndexSlice[ntype, :, :], f'car_type_{ncartype}'].values 
+                * (1 - post_s_age % 2) * (post_s_age >= 4)        
     )
-
-    # For some reason a jax array of booleans cannot index a pandas dataframe, so I have to do this dumb conversion to numpy
-    X = X.loc[np.array(I_feasible), :]
-
+    breakpoint()
     return X, car_type_cols_flatten
-
-
-def create_buying(
-    tab_index,
-    model_struct_arrays,
-    params,
-    options,
-    specification,
-):
-    decision_space = model_struct_arrays["decision_space"]
-
-    # Constructing the columns
-    buying_cols, buying_cols_flatten = utility_helpers.construct_utility_colnames(
-        "buying", "buying_{}_{}", specification, options
-    )
-
-    decision_state_index = tab_index.index
-
-    # Initialize X
-    X = pd.DataFrame(
-        np.nan,
-        index=tab_index.index,
-        columns=buying_cols_flatten,
-    )
-
-    decision_state_pairs_X = tab_index.reset_index()[
-        ["decision", "state"]
-    ].values  # will be used for looping
-
-    # We're going to repeat for all consumer types so we only need to do it for one
-    tab_index = tab_index.loc[0, :, :]
-
-    Z = flow_utility_post_decision_df(tab_index, model_struct_arrays)
-
-    decision_state_pairs = tab_index.reset_index()[
-        ["decision", "state"]
-    ].values  # will be used for looping
-
-    didx_vec = decision_state_pairs[:, 0]
-    Z["d_own"] = decision_space[didx_vec, 0]
-    Z["dum_buy"] = Z["d_own"] == 2
-
-    # Adding buying
-    nconsumers, ncartypes = specification["buying"]
-    if specification["buying"] is None:
-        raise NotImplementedError(
-            "Excluding transaction costs are not implemented yet."
-        )
-    elif (nconsumers == 1) & (ncartypes == 1):
-        # sets the same dummies num_consumer_types many times (in the same column)
-        for ntype in range(0, options["num_consumer_types"]):
-            X.loc[pd.IndexSlice[ntype, :, :], buying_cols] = Z["dum_buy"].values
-    elif (nconsumers > 1) & (ncartypes == 1):
-        for ntype in range(0, options["num_consumer_types"]):
-            X.loc[pd.IndexSlice[ntype, :, :], buying_cols[ntype]] = Z["dum_buy"].values
-    else:
-        raise NotImplementedError(
-            "Psych transactions costs are only allowed to vary with consumer type, not car type."
-        )
-
-    # remove infeasible states
-    I_feasible = mi.feasible_choice_all(
-        decision_state_pairs_X[:, 1],
-        decision_state_pairs_X[:, 0],
-        model_struct_arrays=model_struct_arrays,
-        params=params,
-        options=options,
-    )
-
-    # remove from X
-    X = X.loc[np.array(I_feasible), :]
-
-    return X, buying_cols_flatten
