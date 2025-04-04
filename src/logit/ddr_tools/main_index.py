@@ -35,7 +35,6 @@ def create_main_df(model_struct_arrays, params, options):
         ["tau", "decision", "state", 'car_type_post_decision', "car_age_post_decision"]
     , drop=False)
     
-    breakpoint()
     main_df = main_df.loc[:, ['car_type_state', 'car_age_state',
        'car_type_post_decision', 'car_age_post_decision']]
 

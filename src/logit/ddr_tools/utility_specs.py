@@ -121,10 +121,6 @@ def create_u_a(
                 car_type_dummies.loc[pd.IndexSlice[ntype, :, : , ncartype, :], f'car_type_{ncartype}'].values * 
                 main_df.loc[pd.IndexSlice[ntype, :, :, ncartype, :],"car_age_post_decision"].values                
             )
-    # The best solution would be if the label from the car_type_cols was controlling where to set the values.
-    breakpoint()
-    # always index over options object to make sure nothing is skipped
-    # Then I need some solution to make sure that I do not skip anything.
 
     return X, car_type_cols_flatten
 
@@ -136,15 +132,14 @@ def create_u_a_sq(
     options,
     specification,
 ):
-    if specification['u_a_sq'] is None:
+    if specification['u_a'] is None:
         return None, None
-
-    ntypes, ncartypes = specification['u_a_sq']
-
+        
     # Constructing the columns
-    car_type_cols, car_type_cols_flatten = utility_helpers.construct_utility_colnames(
-        "u_a_sq", "car_type_{}_x_age_sq_{}", specification, options
+    car_type_cols, car_type_cols_flatten, car_type_cols_looper = utility_helpers.construct_utility_colnames(
+        "u_a", "car_type_{}_{}", specification, options
     )
+
     # u_0 dummies
     car_type_dummies = pd.get_dummies(main_df["car_type_post_decision"], prefix="car_type")[
         ["car_type_{}".format(i) for i in range(1, options["n_car_types"] + 1)]
@@ -156,16 +151,15 @@ def create_u_a_sq(
         columns=car_type_cols_flatten,
     )
 
-    # Adding u_a_sq
-    for ntype in range(0, ntypes):
-        for ncartype in range(1, ncartypes+1):
+    for ntype in range(0, options["n_consumer_types"]):
+        for ncartype in range(1, options['n_car_types']+1):
             X.loc[
-                pd.IndexSlice[ntype, :, :], car_type_cols[ntype][ncartype-1]
+                pd.IndexSlice[ntype, :, :, ncartype, :], car_type_cols_looper[ntype][ncartype-1]
             ] = (
-                car_type_dummies.loc[pd.IndexSlice[ntype, :, :], f'car_type_{ncartype}'].values * 
-                main_df.loc[pd.IndexSlice[ntype, :, :],"car_age_post_decision"].values ** 2
-    )
-    breakpoint()
+                car_type_dummies.loc[pd.IndexSlice[ntype, :, : , ncartype, :], f'car_type_{ncartype}'].values * 
+                main_df.loc[pd.IndexSlice[ntype, :, :, ncartype, :],"car_age_post_decision"].values ** 2                
+            )
+
     return X, car_type_cols_flatten
 
 
@@ -176,14 +170,12 @@ def create_u_a_even(
     options,
     specification,
 ):
-    if specification['u_a_even'] is None:
+    if specification['u_a'] is None:
         return None, None
-
-    ntypes, ncartypes = specification['u_a_even']
-
+        
     # Constructing the columns
-    car_type_cols, car_type_cols_flatten = utility_helpers.construct_utility_colnames(
-        "u_a_even", "car_type_{}_x_age_even_{}", specification, options
+    car_type_cols, car_type_cols_flatten, car_type_cols_looper = utility_helpers.construct_utility_colnames(
+        "u_a", "car_type_{}_{}", specification, options
     )
 
     # u_0 dummies
@@ -197,16 +189,13 @@ def create_u_a_even(
         columns=car_type_cols_flatten,
     )
 
-    # Adding u_a
-    for ntype in range(0, ntypes):
-        for ncartype in range(1, ncartypes+1):
-            breakpoint()
-            post_s_age = main_df.loc[pd.IndexSlice[ntype, :, :],"car_age_post_decision"].values
+    for ntype in range(0, options["n_consumer_types"]):
+        for ncartype in range(1, options['n_car_types']+1):
+            post_s_age = main_df.loc[pd.IndexSlice[ntype, :, :, ncartype, :],"car_age_post_decision"].values
             X.loc[
-                pd.IndexSlice[ntype, :, :], car_type_cols[ntype][ncartype-1]
+                pd.IndexSlice[ntype, :, :, ncartype, :], car_type_cols_looper[ntype][ncartype-1]
             ] = (
-                car_type_dummies.loc[pd.IndexSlice[ntype, :, :], f'car_type_{ncartype}'].values 
-                * (1 - post_s_age % 2) * (post_s_age >= 4)        
-    )
-    breakpoint()
+                car_type_dummies.loc[pd.IndexSlice[ntype, :, : , ncartype, :], f'car_type_{ncartype}'].values 
+                * (1 - post_s_age % 2) * (post_s_age >= 4)            
+            )
     return X, car_type_cols_flatten
