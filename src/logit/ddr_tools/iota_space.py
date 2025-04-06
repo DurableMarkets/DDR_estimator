@@ -64,7 +64,7 @@ def create_state_transition_matrix(feasible_idx, model_struct_arrays, model_func
     # Consumer types face the same choice so I pick the 
     
     (consumer_types, decisions, states)= (
-        feasible_idx.get_level_values(level='tau'), 
+        feasible_idx.get_level_values(level='consumer_type'), 
         feasible_idx.get_level_values(level='decision'), 
         feasible_idx.get_level_values(level='state'),
     )
@@ -112,7 +112,7 @@ def create_state_dummy_matrix(feasible_idx, model_struct_arrays):
 
 
     (consumer_types, decisions, states)= (
-        feasible_idx.get_level_values(level='tau'), 
+        feasible_idx.get_level_values(level='consumer_type'), 
         feasible_idx.get_level_values(level='decision'), 
         feasible_idx.get_level_values(level='state'),
     )

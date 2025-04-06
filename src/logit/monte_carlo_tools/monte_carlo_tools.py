@@ -10,7 +10,7 @@ def update_sim_index_to_est_index(index, sim_options):
     n_agents = sim_options["n_agents"]
 
     assert np.all(
-        index.names == ["chunk_i", "consumer_type", "state_idx", "decision_idx"]
+        index.names == ["chunk_i", "consumer_type", "state", "decision"]
     ), "The index names has been altered since simulation!"
     assert (
         estimation_size % chunk_size == 0
@@ -34,7 +34,7 @@ def update_sim_index_to_est_index(index, sim_options):
         df_idx["chunk_i"].map(map_chunk_index_to_estimation_index).astype("Int32")
     )
     df_idx = df_idx.set_index(
-        ["chunk_i", "est_i", "consumer_type", "state_idx", "decision_idx"]
+        ["chunk_i", "est_i", "consumer_type", "state", "decision"]
     )
 
     return df_idx.index

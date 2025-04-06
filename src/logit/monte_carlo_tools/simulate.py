@@ -121,7 +121,7 @@ def load_or_simulate_data(params, options, model_funcs, sim_options, datadir):
         df.rename_axis(
             index=
                 {
-                "consumer_type": "tau", 
+                #"consumer_type": "tau", 
                 "state_idx": "state",
                 "decision_idx": "decision"
                 },
@@ -134,8 +134,8 @@ def load_or_simulate_data(params, options, model_funcs, sim_options, datadir):
             options=options,
         )
 
-        feasible_idx = feasible_idx.reorder_levels(['tau', 'state', 'decision'])
-        breakpoint()
+        feasible_idx = feasible_idx.reorder_levels(['consumer_type', 'state', 'decision'])
+
         df=df.loc[df.index.droplevel('chunk_i').isin(feasible_idx)]
 
 

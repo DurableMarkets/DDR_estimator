@@ -32,7 +32,7 @@ def create_main_df(model_struct_arrays, params, options):
         main_df['post_decision_state_idx'].values]
     
     main_df = main_df.reset_index(drop=False).set_index(
-        ["tau", "decision", "state", 'car_type_post_decision', "car_age_post_decision"]
+        ["consumer_type", "decision", "state", 'car_type_post_decision', "car_age_post_decision"]
     , drop=False)
     
     main_df = main_df.loc[:, ['car_type_state', 'car_age_state',
@@ -76,8 +76,8 @@ def create_tab_index(model_struct_arrays, options):
             for tau in range(n_consumer_types)
         ]
     )
-    index_df = pd.DataFrame(index_array, columns=["tau", "no_car", "age"])
-    index_df.set_index(["tau", "no_car", "age"], inplace=True)
+    index_df = pd.DataFrame(index_array, columns=["consumer_type", "no_car", "age"])
+    index_df.set_index(["consumer_type", "no_car", "age"], inplace=True)
 
     # verify ordering and construct ss index
     current_consumer_type = 0
@@ -102,12 +102,12 @@ def create_tab_index(model_struct_arrays, options):
     tab.columns.name = "decision"
 
     # rename variables:
-    tab = tab.reset_index().melt(id_vars="state", value_name="tau")
+    tab = tab.reset_index().melt(id_vars="state", value_name="consumer_type")
     tab[["decision", "state"]] = tab[["decision", "state"]].astype(
         int
     )  # not sure why this gets converted to 'O'...
 
-    tab = tab.set_index(["tau", "state", "decision"]).sort_index()
+    tab = tab.set_index(["consumer_type", "state", "decision"]).sort_index()
     
     return tab.index
 

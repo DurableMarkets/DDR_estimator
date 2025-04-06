@@ -148,7 +148,7 @@ for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
     df.index = new_index
 
     # aggregate over new index
-    df_Nbar = df.groupby(["est_i", "consumer_type", "state_idx", "decision_idx"]).sum()
+    df_Nbar = df.groupby(["est_i", "consumer_type", "state", "decision"]).sum()
 
     chunks = df_Nbar.index.get_level_values("est_i").unique()[:mc_iter]
     # chunks = df.index.get_level_values("est_i").unique()[:mc_iter]
@@ -160,20 +160,17 @@ for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
         # aggregate over chosen chunks
         sim_df = (
             df_Nbar.loc[slicer]
-            .groupby(["consumer_type", "state_idx", "decision_idx"])
+            .groupby(["consumer_type", "state", "decision"])
             .sum()
         ).reset_index()
 
         cfps, counts = dependent_vars.calculate_cfps_from_df(sim_df)
-
         
-        cfps = cfps.loc[I_feasible, :]
-        counts = counts.loc[I_feasible, :]
-
         scrap_probabilities = dependent_vars.calculate_scrap_probabilities(sim_df)
-#
-#         # Estimate accident parameters
-#         #acc_0_hat = mc.calculate_accident_parameters(scrap_probabilities=scrap_probabilities)
+        breakpoint()
+
+        # Estimate accident parameters
+        acc_0_hat = mc.calculate_accident_parameters(scrap_probabilities=scrap_probabilities)
 #
 #         # Update params to acomodate new "estimated" acc_0
 #         #params_hat, options = update_params_and_options(params={"acc_0": acc_0_hat}, options=options)
