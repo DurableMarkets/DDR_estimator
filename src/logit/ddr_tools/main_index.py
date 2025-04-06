@@ -40,9 +40,6 @@ def create_main_df(model_struct_arrays, params, options):
 
     return main_df
 
-
-
-
 def create_main_feasible_idx(model_struct_arrays, params, options):
 
     tab_idx = create_tab_index(
@@ -110,7 +107,7 @@ def create_tab_index(model_struct_arrays, options):
         int
     )  # not sure why this gets converted to 'O'...
 
-    tab = tab.set_index(["tau", "decision", "state"]).sort_index()
+    tab = tab.set_index(["tau", "state", "decision"]).sort_index()
     
     return tab.index
 

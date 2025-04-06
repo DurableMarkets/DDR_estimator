@@ -1,8 +1,9 @@
 import logit.ddr_tools.main_index as main_index
 import logit.ddr_tools.regressors as regressors
-
-import logit.monte_carlo.mctools as mc
-import logit.DDR_estimation.model_interface as mi
+import logit.monte_carlo_tools.simulate as simulate
+import logit.monte_carlo_tools.misc_tools as misc_tools
+import logit.monte_carlo_tools.monte_carlo_tools as monte_carlo_tools
+import logit.ddr_tools.dependent_vars as dependent_vars
 # from eqb.process_model_struct import create_model_struct_arrays
 # from eqb.equilibrium import equilibrium_solver
 # import DDR_estimation.utils
@@ -98,21 +99,21 @@ params, options = jpe_model["update_params_and_options"](
     options,
     fsim_options,
     model_struct_arrays,
-) = mc.load_or_simulate_data(params, options, jpe_model, sim_options, path_dict["sim_data"])
+) = simulate.load_or_simulate_data(params, options, jpe_model, sim_options, path_dict["sim_data"])
 
 
 for key in model_struct_arrays.keys():
     model_struct_arrays[key] = np.array(model_struct_arrays[key])
 
 # # create a dict of prices
-prices = mc.construct_price_dict(
+prices = misc_tools.construct_price_dict(
     equ_price=model_solution["equ_prices"],
     state_space_arrays=model_struct_arrays,
     params=params,
     options=options,
 )
 
-
+# Create main index used for constructing regressors
 main_df = main_index.create_main_df(
         model_struct_arrays=model_struct_arrays,
         params=params,
@@ -129,48 +130,47 @@ X_indep, model_specification = regressors.create_data_independent_regressors(
     options=options,
     specification=specification,
 )
-breakpoint()
 
 
-# # mc simulation
-# ests = []
-# df_idx = df.index
-# # Loops over monte carlos of different sizes
-# for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
-#     # redefining sim_options
-#     sim_options["estimation_size"] = Nbar
-#
-#     # replace sim_index with with estimation index.
-#     new_index = mc.update_sim_index_to_est_index(df_idx, sim_options)
-#     # This changes the index of df to the estimation index
-#     # in each loop I overwrite existing index in the same dataframe df
-#     df.index = new_index
-#
-#     # aggregate over new index
-#     df_Nbar = df.groupby(["est_i", "consumer_type", "state_idx", "decision_idx"]).sum()
-#
-#     chunks = df_Nbar.index.get_level_values("est_i").unique()[:mc_iter]
-#     # chunks = df.index.get_level_values("est_i").unique()[:mc_iter]
-#     # loops over monte carlo iterations
-#     for i in tqdm(chunks, desc="Current MC progress", leave=False):
-#         slicer = pd.IndexSlice[chunks[i : (i + 1)], :, :]
-#         # sim_df = df_Nbar.loc[slicer]
-#
-#         # aggregate over chosen chunks
-#         sim_df = (
-#             df_Nbar.loc[slicer]
-#             .groupby(["consumer_type", "state_idx", "decision_idx"])
-#             .sum()
-#         ).reset_index()
-#
-#         cfps = mc.calculate_cfps_from_df(sim_df, calc_counts=False)
-#         cfps = cfps.loc[I_feasible, :]
-#
-#         counts = mc.calculate_cfps_from_df(sim_df, calc_counts=True)
-#         counts = counts.loc[I_feasible, :]
-#
-#         scrap_probabilities = mc.calculate_scrap_probabilities(sim_df)
-#         breakpoint()
+# mc simulation
+ests = []
+df_idx = df.index
+#TODO: Strange that the indices are named differently across the data df and the main_df...
+# Loops over monte carlos of different sizes
+for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
+    # redefining sim_options
+    sim_options["estimation_size"] = Nbar
+
+    # replace sim_index with with estimation index.
+    new_index = monte_carlo_tools.update_sim_index_to_est_index(df_idx, sim_options)
+    # This changes the index of df to the estimation index
+    # in each loop I overwrite existing index in the same dataframe df
+    df.index = new_index
+
+    # aggregate over new index
+    df_Nbar = df.groupby(["est_i", "consumer_type", "state_idx", "decision_idx"]).sum()
+
+    chunks = df_Nbar.index.get_level_values("est_i").unique()[:mc_iter]
+    # chunks = df.index.get_level_values("est_i").unique()[:mc_iter]
+    # loops over monte carlo iterations
+    for i in tqdm(chunks, desc="Current MC progress", leave=False):
+        slicer = pd.IndexSlice[chunks[i : (i + 1)], :, :]
+        # sim_df = df_Nbar.loc[slicer]
+
+        # aggregate over chosen chunks
+        sim_df = (
+            df_Nbar.loc[slicer]
+            .groupby(["consumer_type", "state_idx", "decision_idx"])
+            .sum()
+        ).reset_index()
+
+        cfps, counts = dependent_vars.calculate_cfps_from_df(sim_df)
+
+        
+        cfps = cfps.loc[I_feasible, :]
+        counts = counts.loc[I_feasible, :]
+
+        scrap_probabilities = dependent_vars.calculate_scrap_probabilities(sim_df)
 #
 #         # Estimate accident parameters
 #         #acc_0_hat = mc.calculate_accident_parameters(scrap_probabilities=scrap_probabilities)
