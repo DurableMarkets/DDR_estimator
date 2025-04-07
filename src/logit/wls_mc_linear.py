@@ -4,6 +4,8 @@ import logit.monte_carlo_tools.simulate as simulate
 import logit.monte_carlo_tools.misc_tools as misc_tools
 import logit.monte_carlo_tools.monte_carlo_tools as monte_carlo_tools
 import logit.ddr_tools.dependent_vars as dependent_vars
+import logit.prices.prices as prices
+import logit.estimators.wls_estimation as wls_estimation
 # from eqb.process_model_struct import create_model_struct_arrays
 # from eqb.equilibrium import equilibrium_solver
 # import DDR_estimation.utils
@@ -38,18 +40,19 @@ num_car_types = 2
 
 specification = {
     "mum": (num_consumers, 1),
-    "buying": (num_consumers, 1),
+    #"buying": (num_consumers, 1),
+    "buying": None,
     "scrap_correction": (num_consumers, 1),
-    "u_0": (num_consumers, 1),
-    "u_a": (num_consumers, num_car_types),
+    "u_0": (num_consumers, num_car_types),
+    "u_a": (num_consumers, 1),
     "u_a_sq": None,
     "u_a_even": None,
 }
 
 # chunk_size and n_periods should be tuned to jax's memory capacity and mc_iter should control the number of observations.
 chunk_size = 100_000
-mc_iter = 100
-N_mc = 500_000 #5_000_000 
+mc_iter = 1
+N_mc = 50_000_000 #5_000_000 
 sample_iter = N_mc * mc_iter // chunk_size
 
 # Estimation_size controls the sample size used in the estimation
@@ -80,6 +83,9 @@ params_update = {
     "p_fuel": [0.0],
     "acc_0": [-100.0],
     "mum": [0.5, 0.5],
+    #"psych_transcost": [1.0, 1.0],
+    #'sigma_sell_scrapp': 0.0000000001,
+    #'pscrap': [1.0,1.0],
 }
 
 options_update = {
@@ -91,6 +97,7 @@ options_update = {
 params, options = jpe_model["update_params_and_options"](
     params=params_update, options=options_update
 )
+breakpoint()
 # Simulate data or load data
 (
     model_solution,
@@ -106,7 +113,7 @@ for key in model_struct_arrays.keys():
     model_struct_arrays[key] = np.array(model_struct_arrays[key])
 
 # # create a dict of prices
-prices = misc_tools.construct_price_dict(
+price_dict = misc_tools.construct_price_dict(
     equ_price=model_solution["equ_prices"],
     state_space_arrays=model_struct_arrays,
     params=params,
@@ -123,7 +130,7 @@ main_df = main_index.create_main_df(
 # creating data independent regressors
 X_indep, model_specification = regressors.create_data_independent_regressors(
     main_df=main_df,
-    prices=prices,
+    prices=price_dict,
     model_struct_arrays=model_struct_arrays,
     model_funcs = jpe_model,
     params=params,
@@ -165,38 +172,42 @@ for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
         ).reset_index()
 
         cfps, counts = dependent_vars.calculate_cfps_from_df(sim_df)
+        cfps = dependent_vars.true_ccps(main_df, model_solution, options)
         
         scrap_probabilities = dependent_vars.calculate_scrap_probabilities(sim_df)
+        scrap_probabilities = model_solution["ccp_scrap_tau"]
         breakpoint()
 
+
         # Estimate accident parameters
-        acc_0_hat = mc.calculate_accident_parameters(scrap_probabilities=scrap_probabilities)
-#
-#         # Update params to acomodate new "estimated" acc_0
-#         #params_hat, options = update_params_and_options(params={"acc_0": acc_0_hat}, options=options)
-#         params_hat = params
-#
-#         # create data dependent regressors
-#         X_dep, _ = utils.create_data_dependent_regressors(
-#             tab_index=tab_index,
-#             prices=prices,
-#             scrap_probabilities=scrap_probabilities,
-#             state_decision_arrays=model_struct_arrays,
-#             params=params_hat,
-#             options=options,
-#             specification=specification,
-#         )
-#
-#         # combine independent and dependent regressors
-#         X = utils.create_regressors_combine_parts(X_indep, X_dep, model_specification)
-#
-#         # Estimate pddr regression
-#         est = mc.wls_regression_mc(
-#             ccps=cfps,
-#             counts=counts,
-#             X=X,
-#             model_specification=model_specification,
-#         )
+        #acc_0_hat = monte_carlo_tools.calculate_accident_parameters(scrap_probabilities=scrap_probabilities)
+        
+        # Update params to acomodate new "estimated" acc_0
+        #params_hat, options = update_params_and_options(params={"acc_0": acc_0_hat}, options=options)
+        #params_hat = params
+
+        # create data dependent regressors
+        X_dep, _ = prices.create_data_dependent_regressors(
+            main_df=main_df,
+            prices=price_dict,
+            scrap_probabilities=scrap_probabilities,
+            model_struct_arrays=model_struct_arrays,
+            model_funcs=jpe_model,
+            params=params,
+            options=options,
+            specification=specification,
+        )
+        # combine independent and dependent regressors
+        X = dependent_vars.combine_regressors(X_indep, X_dep, model_specification)
+
+        # Estimate 
+        est = wls_estimation.wls_regression_mc(
+            X=X,
+            ccps=cfps,
+            counts=counts,
+            model_specification=model_specification,
+        )
+        breakpoint()
 #
 #         est = est.rename(columns={"Coefficient": "Estimates"})
 #         est["mc_iter"] = i

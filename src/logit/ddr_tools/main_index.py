@@ -13,11 +13,21 @@ def create_main_df(model_struct_arrays, params, options):
         index=feasible_idx,
     )
 
+    # states
     main_df['car_type_state'] = model_struct_arrays['state_space'][
         main_df.index.get_level_values("state").values, 0]
     main_df['car_age_state'] = model_struct_arrays['state_space'][
         main_df.index.get_level_values("state").values, 1]
-
+    
+    # decisions
+    main_df['own_decision'] = model_struct_arrays['decision_space'][
+        main_df.index.get_level_values("decision").values, 0]
+    main_df['car_type_decision'] = model_struct_arrays['decision_space'][
+        main_df.index.get_level_values("decision").values, 1]
+    main_df['car_age_decision'] = model_struct_arrays['decision_space'][
+        main_df.index.get_level_values("decision").values, 2]
+    
+    # post decisision states
     main_df["post_decision_state_idx"]  = model_struct_arrays['post_decision_state_idxs'][
         main_df.index.get_level_values("state").values,
         main_df.index.get_level_values("decision").values]
@@ -35,8 +45,9 @@ def create_main_df(model_struct_arrays, params, options):
         ["consumer_type", "decision", "state", 'car_type_post_decision', "car_age_post_decision"]
     , drop=False)
     
-    main_df = main_df.loc[:, ['car_type_state', 'car_age_state',
-       'car_type_post_decision', 'car_age_post_decision']]
+    main_df = main_df.loc[:, ['car_type_state', 'car_age_state', 
+        'own_decision', 'car_type_decision', 'car_age_decision',
+        'car_type_post_decision', 'car_age_post_decision']]
 
     return main_df
 

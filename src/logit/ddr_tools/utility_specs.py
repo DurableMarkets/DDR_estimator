@@ -10,6 +10,9 @@ def create_buying(
     options,
     specification,
 ):
+    if specification["buying"] is None:
+        return None, None
+    
     decision_space = model_struct_arrays["decision_space"]
 
     # Constructing the columns
@@ -35,11 +38,7 @@ def create_buying(
 
     # Adding buying
     nconsumers, ncartypes = specification["buying"]
-    if specification["buying"] is None:
-        raise NotImplementedError(
-            "Excluding transaction costs are not implemented yet."
-        )
-    elif (nconsumers == 1) & (ncartypes == 1):
+    if (nconsumers == 1) & (ncartypes == 1):
         X.loc[:, buying_cols] = helper_df["dum_buy"].values
     elif (nconsumers > 1) & (ncartypes == 1):
         for ntype in range(0, nconsumers):
@@ -99,7 +98,7 @@ def create_u_a(
         
     # Constructing the columns
     car_type_cols, car_type_cols_flatten, car_type_cols_looper = utility_helpers.construct_utility_colnames(
-        "u_a", "car_type_{}_{}", specification, options
+        "u_a", "car_type_{}_x_age_{}", specification, options
     )
 
     # u_0 dummies
