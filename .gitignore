@@ -17,7 +17,8 @@ __pycache__/
 .conda
 
 # data folders
-sim_data/.
+sim_data/*.*
+output/simulations/*
 
 # Large files
 dta_and_likelihood.mat
@@ -44,3 +45,4 @@ nan_params.pkl
 analysis/estimation/data/*pkl
 model_solution*.pkl
 **.egg-info/
+sim_data/data.pkl
