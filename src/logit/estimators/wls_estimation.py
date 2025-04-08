@@ -13,19 +13,13 @@ def wls_regression_mc(X, ccps, counts, model_specification):
 
     """
     # Index for zero share rows
-    # I = ccps.values.flatten() != 0.0
 
     X = X[model_specification]
     X = X.values.astype(float)
 
-    # X = X[I, :]
-
-    # ccps = ccps.loc[I, :]
     logY = np.log(ccps.values.flatten())
 
-
     B = estimate_wls(logY, X, ccps, counts)
-    breakpoint()
     est = pd.DataFrame(B, index=[model_specification], columns=["Coefficient"])
 
     return est
@@ -46,12 +40,7 @@ def estimate_wls(Y, X, ccps, counts):
 
     # WLS regression
 
-    # jaxlinalgsolve=jax.jit(jnp.linalg.solve)
-    # Does nothing to speed up the code.
-    # I could consider using vmap instead of a for loop
-
     g0 = jnp.linalg.solve(xwx, xwy)
-    # g0 = jaxlinalgsolve(xwx, xwy)
 
     return g0
 
@@ -62,13 +51,6 @@ def calculate_weights(ccps,counts):
 
     # if n_ds == 0:
     I = n_ds != 0.0
-    # std_ds = np.zeros_like(cfps)
-    # std_ds[I] = np.sqrt( cfps[I] * (1 - cfps[I]) / n_ds[I] )
-
-    # In the proces of creating the var_ds some values can get incredibly small and therefore be interpreted as zeros.
-    # This is not good since it will lead to division by zero.
-    # Therefore I do a new index
-    # I = std_ds > 0.0
 
     # initialize weights
     weights = np.zeros_like(counts)

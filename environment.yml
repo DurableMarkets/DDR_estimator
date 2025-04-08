@@ -24,6 +24,7 @@ dependencies:
   # Plotting
   - matplotlib
   - seaborn
+  - jinja2
 
    # JAX
   - pip:

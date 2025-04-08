@@ -30,7 +30,6 @@ def true_ccps(main_df, model_solution, options):
 
     ccps=ccps.loc[:, "ccps"]
 
-    breakpoint()
     return ccps
 
 

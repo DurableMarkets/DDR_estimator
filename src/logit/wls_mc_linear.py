@@ -6,9 +6,6 @@ import logit.monte_carlo_tools.monte_carlo_tools as monte_carlo_tools
 import logit.ddr_tools.dependent_vars as dependent_vars
 import logit.prices.prices as prices
 import logit.estimators.wls_estimation as wls_estimation
-# from eqb.process_model_struct import create_model_struct_arrays
-# from eqb.equilibrium import equilibrium_solver
-# import DDR_estimation.utils
 import jax.numpy as jnp
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -28,7 +25,7 @@ jax.config.update("jax_enable_x64", True)
 pd.set_option("display.max_rows", 705)
 
 # set output directory
-out_dir = "./results/wls monte carlo runs/linear specification/test/"
+out_dir = "./output/simulations/wls/"
 
 # Set options
 
@@ -40,8 +37,8 @@ num_car_types = 2
 
 specification = {
     "mum": (num_consumers, 1),
-    #"buying": (num_consumers, 1),
-    "buying": None,
+    "buying": (num_consumers, 1),
+    #"buying": None,
     "scrap_correction": (num_consumers, 1),
     "u_0": (num_consumers, num_car_types),
     "u_a": (num_consumers, 1),
@@ -51,8 +48,8 @@ specification = {
 
 # chunk_size and n_periods should be tuned to jax's memory capacity and mc_iter should control the number of observations.
 chunk_size = 100_000
-mc_iter = 1
-N_mc = 50_000_000 #5_000_000 
+mc_iter = 1000
+N_mc = 500_000 #5_000_000 
 sample_iter = N_mc * mc_iter // chunk_size
 
 # Estimation_size controls the sample size used in the estimation
@@ -83,7 +80,8 @@ params_update = {
     "p_fuel": [0.0],
     "acc_0": [-100.0],
     "mum": [0.5, 0.5],
-    #"psych_transcost": [1.0, 1.0],
+    "psych_transcost": [2.0, 2.0],
+    'u_0': np.array([[12.0,12.0],[12.0,12.0]])
     #'sigma_sell_scrapp': 0.0000000001,
     #'pscrap': [1.0,1.0],
 }
@@ -97,7 +95,7 @@ options_update = {
 params, options = jpe_model["update_params_and_options"](
     params=params_update, options=options_update
 )
-breakpoint()
+
 # Simulate data or load data
 (
     model_solution,
@@ -172,11 +170,10 @@ for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
         ).reset_index()
 
         cfps, counts = dependent_vars.calculate_cfps_from_df(sim_df)
-        cfps = dependent_vars.true_ccps(main_df, model_solution, options)
+        #cfps = dependent_vars.true_ccps(main_df, model_solution, options)
         
         scrap_probabilities = dependent_vars.calculate_scrap_probabilities(sim_df)
-        scrap_probabilities = model_solution["ccp_scrap_tau"]
-        breakpoint()
+        #scrap_probabilities = model_solution["ccp_scrap_tau"]
 
 
         # Estimate accident parameters
@@ -207,112 +204,107 @@ for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
             counts=counts,
             model_specification=model_specification,
         )
-        breakpoint()
-#
-#         est = est.rename(columns={"Coefficient": "Estimates"})
-#         est["mc_iter"] = i
-#         est["Nbar"] = int(Nbar)
-#         est = est.set_index(["Nbar", "mc_iter"], append=True)
-#
-#         ests.append(est)
-#
-# # Extract true parameters
-# true_params=mc.extract_true_structural_parameters(equ_output, model_struct_arrays, params, options)
-#
-# true_params['mc_iter'] = 'true_ccps'
-# true_params.index = true_params.index.get_level_values(0)
-# true_params.index.name = "coefficients"
-#
-# breakpoint()
-# # combine runs
-# runs = pd.concat(ests, axis=0)
-#
-# # Renaming indexes
-# runs.index.names = ["coefficients", "Nbars", "mc_iter"]
-#
-# # Build a table that demonstrates the properties of the PDDR.
-# # I would liketo include mean value and standard deviation of the estimates,
-# # As a minimum.
-#
-# means = runs.groupby(["coefficients", "Nbars"], sort=False).mean()
-# means = means.rename(columns={"Estimates": "mean"})
-# list_of_Nbars = Nbars.tolist()
-#
-# tuples = list(zip(["Sample size"] * len(list_of_Nbars), list_of_Nbars))
-# idx = pd.IndexSlice
-# for i, tuple in enumerate(tuples):
-#     means.loc[idx[tuple], "mean"] = list_of_Nbars[i]
-#
-# tuples = list(zip(["MC iterations"] * len(list_of_Nbars), list_of_Nbars))
-# idx = pd.IndexSlice
-# for i, tuple in enumerate(tuples):
-#     means.loc[idx[tuple], "mean"] = mc_iter
-#
-# # long table
-# stds = runs.groupby(["coefficients", "Nbars"], sort=False).std()
-# stds = stds.rename(columns={"Estimates": "std"})
-# p_025 = runs.groupby(["coefficients", "Nbars"], sort=False).quantile(0.025)
-# p_025 = p_025.rename(columns={"Estimates": "p2.5"})
-# p_975 = runs.groupby(["coefficients", "Nbars"], sort=False).quantile(0.975)
-# p_975 = p_975.rename(columns={"Estimates": "p97.5"})
-# # stats = pd.concat([true_est, means, stds, p_025, p_975], axis=1)
-# stats = pd.concat([means, stds, p_025, p_975], axis=1)
+
+        est = est.rename(columns={"Coefficient": "Estimates"})
+        est["mc_iter"] = i
+        est["Nbar"] = int(Nbar)
+        est = est.set_index(["Nbar", "mc_iter"], append=True)
+
+        ests.append(est)
+
+# Extract true parameters
+true_params=monte_carlo_tools.extract_true_structural_parameters(model_solution, model_struct_arrays, params, options)
+
+true_params['mc_iter'] = 'true_ccps'
+true_params.index = true_params.index.get_level_values(0)
+true_params.index.name = "coefficients"
+
+breakpoint()
+# combine runs
+runs = pd.concat(ests, axis=0)
+
+# Renaming indexes
+runs.index.names = ["coefficients", "Nbars", "mc_iter"]
+
+means = runs.groupby(["coefficients", "Nbars"], sort=False).mean()
+means = means.rename(columns={"Estimates": "mean"})
+list_of_Nbars = Nbars.tolist()
+
+tuples = list(zip(["Sample size"] * len(list_of_Nbars), list_of_Nbars))
+idx = pd.IndexSlice
+for i, tuple in enumerate(tuples):
+    means.loc[idx[tuple], "mean"] = list_of_Nbars[i]
+
+tuples = list(zip(["MC iterations"] * len(list_of_Nbars), list_of_Nbars))
+idx = pd.IndexSlice
+for i, tuple in enumerate(tuples):
+    means.loc[idx[tuple], "mean"] = mc_iter
+
+# long table
+stds = runs.groupby(["coefficients", "Nbars"], sort=False).std()
+stds = stds.rename(columns={"Estimates": "std"})
+p_025 = runs.groupby(["coefficients", "Nbars"], sort=False).quantile(0.025)
+p_025 = p_025.rename(columns={"Estimates": "p2.5"})
+p_975 = runs.groupby(["coefficients", "Nbars"], sort=False).quantile(0.975)
+p_975 = p_975.rename(columns={"Estimates": "p97.5"})
+# stats = pd.concat([true_est, means, stds, p_025, p_975], axis=1)
+stats = pd.concat([means, stds, p_025, p_975], axis=1)
 #
 # # adding true values:
-# varnames = stats.index.get_level_values('coefficients').to_list()
-# tuples = list(zip(varnames, ["true values"] * len(varnames)))
-# true_params_df = true_params.reset_index()
-# true_params_df['Nbars'] = 'true value'
-# true_params_df = true_params_df.set_index(['coefficients', 'Nbars'])
-# true_params_df = true_params_df.rename(columns={'true values': 'mean'})
-# true_params_df = true_params_df[['mean']]
-# stats = pd.concat([stats, true_params_df], axis=0)
-#
-# #idx = pd.IndexSlice
-# #for i, tuple in enumerate(tuples):
-# #    breakpoint()
-# #    stats.loc[idx[tuple], "mean"] = true_params['true values'].loc[tuple[0]]
-# #breakpoint()
-# #stats.index = stats.index.set_levels(
-# #    pd.Categorical(
-# #        stats.index.levels[0],
-# #        categories=true_params.index.tolist() + ["Sample size", "MC iterations"],
-# #        ordered=True,
-# #    ),
-# #    level=0,
-# #)
-# #stats = stats.sort_index(level=0)
-#
-# stats = stats.sort_index(
-#     level=["coefficients", "Nbars"], ascending=[True, True]
-# ).reset_index()
-#
-#
-# stats.round(4).to_latex(out_dir + "mc_table_long.tex", escape=False)
-# stats.round(4).to_markdown(out_dir + "mc_table_long.md")
-# # short table:
-# largest_Nbar = int(Nbars.max())
-# runs_largest = runs.loc[pd.IndexSlice[:, largest_Nbar, :], :].reset_index(
-#     level="Nbars", drop=True
-# )
-#
-# means = runs_largest.groupby(["coefficients"], sort=False).mean()
-# means = means.rename(columns={"Estimates": "mean"})
-#
-# means.loc["Sample size", "mean"] = largest_Nbar
-# means.loc["MC iterations", "mean"] = mc_iter
-#
-#
-# stds = runs_largest.groupby(["coefficients"], sort=False).std()
-# stds = stds.rename(columns={"Estimates": "std"})
-# p_025 = runs_largest.groupby(["coefficients"], sort=False).quantile(0.025)
-# p_025 = p_025.rename(columns={"Estimates": "p2.5"})
-# p_975 = runs_largest.groupby(["coefficients"], sort=False).quantile(0.975)
-# p_975 = p_975.rename(columns={"Estimates": "p97.5"})
-# stats = pd.concat([true_params, means, stds, p_025, p_975], axis=1)
-#
-# stats.round(4).to_latex(out_dir + "mc_table.tex", escape=False)
-# stats.round(4).to_markdown(out_dir + "mc_table.md")
+varnames = stats.index.get_level_values('coefficients').to_list()
+tuples = list(zip(varnames, ["true values"] * len(varnames)))
+true_params_df = true_params.reset_index()
+true_params_df['Nbars'] = 'true value'
+true_params_df = true_params_df.set_index(['coefficients', 'Nbars'])
+true_params_df = true_params_df.rename(columns={'true values': 'mean'})
+true_params_df = true_params_df[['mean']]
+stats = pd.concat([stats, true_params_df], axis=0)
+
+#idx = pd.IndexSlice
+#for i, tuple in enumerate(tuples):
+#    breakpoint()
+#    stats.loc[idx[tuple], "mean"] = true_params['true values'].loc[tuple[0]]
+#breakpoint()
+#stats.index = stats.index.set_levels(
+#    pd.Categorical(
+#        stats.index.levels[0],
+#        categories=true_params.index.tolist() + ["Sample size", "MC iterations"],
+#        ordered=True,
+#    ),
+#    level=0,
+#)
+#stats = stats.sort_index(level=0)
+
+stats = stats.sort_index(
+    level=["coefficients", "Nbars"], ascending=[True, True]
+).reset_index()
+
+
+stats.round(4).to_latex(out_dir + "mc_table_long.tex", escape=False)
+stats.round(4).to_markdown(out_dir + "mc_table_long.md")
+# short table:
+largest_Nbar = int(Nbars.max())
+runs_largest = runs.loc[pd.IndexSlice[:, largest_Nbar, :], :].reset_index(
+    level="Nbars", drop=True
+)
+
+means = runs_largest.groupby(["coefficients"], sort=False).mean()
+means = means.rename(columns={"Estimates": "mean"})
+
+means.loc["Sample size", "mean"] = largest_Nbar
+means.loc["MC iterations", "mean"] = mc_iter
+
+
+stds = runs_largest.groupby(["coefficients"], sort=False).std()
+stds = stds.rename(columns={"Estimates": "std"})
+p_025 = runs_largest.groupby(["coefficients"], sort=False).quantile(0.025)
+p_025 = p_025.rename(columns={"Estimates": "p2.5"})
+p_975 = runs_largest.groupby(["coefficients"], sort=False).quantile(0.975)
+p_975 = p_975.rename(columns={"Estimates": "p97.5"})
+stats = pd.concat([true_params, means, stds, p_025, p_975], axis=1)
+
+stats.round(4).to_latex(out_dir + "mc_table.tex", escape=False)
+stats.round(4).to_markdown(out_dir + "mc_table.md")
 #
 #
 # # Build a violin plot of the estimates for each parameter.
