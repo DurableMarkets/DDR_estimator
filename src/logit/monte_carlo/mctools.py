@@ -388,6 +388,9 @@ def simulate_data_jax(
 
     # This method seems to be faster
     dfs = jax.lax.map(jit_simulate_chunk_jax, xs=seeds)
+    #vmap_simulate = jax.jit(jax.vmap(jit_simulate_chunk_jax))
+    #dfs = vmap_simulate(seeds)
+
     # dfs = map_simulate(seeds)
 
     # array approach
