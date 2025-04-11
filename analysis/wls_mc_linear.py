@@ -48,8 +48,8 @@ specification = {
 
 # chunk_size and n_periods should be tuned to jax's memory capacity and mc_iter should control the number of observations.
 chunk_size = 500_000
-mc_iter = 1000
-N_mc = 10_000_000 #5_000_000 
+mc_iter = 100
+N_mc = 1_000_000 #5_000_000 
 sample_iter = N_mc * mc_iter // chunk_size
 
 # Estimation_size controls the sample size used in the estimation
@@ -82,7 +82,7 @@ params_update = {
     "acc_0": [-100.0],
     "mum": [0.5, 0.5],
     "psych_transcost": [2.0, 2.0],
-    'u_0': np.array([[12.0,12.0],[12.0,12.0]])
+    'u_0': np.array([[12.0, 12.0],[12.0, 12.0]])
     #'sigma_sell_scrapp': 0.0000000001,
     #'pscrap': [1.0,1.0],
 }

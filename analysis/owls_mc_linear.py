@@ -48,8 +48,8 @@ specification = {
 
 # chunk_size and n_periods should be tuned to jax's memory capacity and mc_iter should control the number of observations.
 chunk_size = 500_000
-mc_iter = 1000
-N_mc = 10_000_000 #5_000_000 
+mc_iter = 100
+N_mc = 2_000_000 #5_000_000 
 sample_iter = N_mc * mc_iter // chunk_size
 
 # Estimation_size controls the sample size used in the estimation
@@ -72,8 +72,8 @@ sim_options = {
 }
 
 # stores different sample sizes for multiple monte carlo runs
-Nbars = jnp.arange(0, N_mc,  10**6) +  10**6
-#Nbars = jnp.array([N_mc])
+#Nbars = jnp.arange(0, N_mc,  10**6) +  10**6
+Nbars = jnp.array([N_mc])
 
 # update options and params with number of consumers and car types
 params_update = {

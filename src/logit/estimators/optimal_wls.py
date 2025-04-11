@@ -35,7 +35,7 @@ def playground_test_of_pseudo_inverses(ccps, counts):
     
     A= N * (
         np.diag(P)
-        @(np.identity(K) - np.ones((K,K)))
+        @(np.identity(K) - 1/K *np.ones((K,K)))
         @ np.diag(1/P) 
         @ (np.identity(K) - 1/K * np.ones((K,K))) 
         @ np.diag(P)
@@ -45,6 +45,9 @@ def playground_test_of_pseudo_inverses(ccps, counts):
     B = N * (np.diag(1/P) - np.ones((K,K)))   
     B = 1/N *(np.diag(1/P) - np.ones((K,K)))
     ABA=A @ B @ A 
+
+    # Symmetry check
+    np.allclose(A.T, A)
 
     np.allclose(A, ABA)
 
@@ -85,10 +88,13 @@ def estimate_owls(Y, X, ccps, counts):
     # calc the weights
     weight_blocks = calculate_weights(ccps, counts)
     X_indices = X.index.droplevel([level for level in X.index.names if level not in ["consumer_type", "state"]]).unique()
-
-    xw = jnp.concatenate([ (weight_blocks[i].T @ X.loc[X_indices[i][0],:,X_indices[i][1], :, :]).values for i in range(len(weight_blocks))])
-    xwx = xw.T @ X.values
-    xwy = xw.T @ Y
+    #breakpoint()
+    xw = jnp.concatenate(
+        [X.loc[X_indices[i][0],:,X_indices[i][1], :, :].values.T 
+        @ weight_blocks[i] for i in range(len(weight_blocks))]
+    ,axis=1)
+    xwx = xw @ X.values
+    xwy = xw @ Y
 
     # WLS regression
 
@@ -105,6 +111,7 @@ def calculate_weights(ccps, counts):
     N = counts.groupby(
         ["consumer_type", "state"]
     ).sum()
+    N_all = counts.sum()
 
     weight_blocks = []
     for i in range(N.shape[0]):
@@ -113,13 +120,19 @@ def calculate_weights(ccps, counts):
         K = P.shape[0]
         N_is = N.loc[N.index[i]]
         # A is the pseudo-inverse of B 
-        A= N_is * (
-            np.diag(P)
-            @(np.identity(K) - np.ones((K,K)))
-            @ np.diag(1/P) 
-            @ (np.identity(K) - 1/K * np.ones((K,K))) 
-            @ np.diag(P)
+        A= N_is/N_all * (
+           np.diag(P)
+           @
+           (np.identity(K) - 1/K * np.ones((K,K)))
+           @ np.diag(1/P) 
+           @ (np.identity(K) - 1/K * np.ones((K,K))) 
+           @ np.diag(P)
         )
+
+        # Test 1
+        #A= N_is/N_all * (np.identity(K))
+        #A=  (np.identity(K))
+
         # A= (
         #     np.diag(P)
         #     @(np.identity(K) - np.ones((K,K)))
@@ -127,6 +140,9 @@ def calculate_weights(ccps, counts):
         #     @ (np.identity(K) - 1/K * np.ones((K,K))) 
         #     @ np.diag(P)
         # )
+        # Test 2 
+        # Try N_is/N diag(p_sd - p_sd**2)
+
         #A = 1/N_is *(np.diag(P) - np.c_[P] * np.r_[P])
         #A = np.diag(P) - np.c_[P] * np.r_[P]
 

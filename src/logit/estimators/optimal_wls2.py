@@ -77,11 +77,12 @@ def estimate_owls(Y, X, ccps, counts):
     # calc the weights
     XwX_blocks, XwY_blocks = calculate_blocks(ccps, X, counts)
 
+    # TODO: there is a bug here. The shape is off. 
     xwx = jnp.concatenate(XwX_blocks, axis=0)
     xwy = jnp.concatenate(XwY_blocks, axis=0)
-
+    
     # WLS regression
-
+    breakpoint()
     g0 = np.linalg.solve(xwx, xwy)
 
     return g0
@@ -95,13 +96,15 @@ def calculate_blocks(ccps, X, counts):
         ["consumer_type", "state"]
     ).sum()
 
+    N_all = counts.sum()
+
     XwX_blocks = []
     XwY_blocks = []
     for i in range(N.shape[0]):
         consumer_type, state=N.index[i]
         P = ccps.loc[idx[consumer_type, state, :]].values
         K = P.shape[0]
-        #N_is = N.loc[N.index[i]]
+        N_is = N.loc[N.index[i]]
 
         X_is=X.loc[consumer_type,:,state, :, :].astype(float).values
         
@@ -111,10 +114,11 @@ def calculate_blocks(ccps, X, counts):
 
         XwX = XqX - Xq @ Xq.T
 
-        XwY = (X_is.T @ np.diag(P) @ np.log(P)  - Xq @ P.T @ np.log(P))
+        #breakpoint()
+        XwY = (X_is.T @ np.diag(P) @ np.log(P)  - X_is.T @ np.c_[P] @ np.c_[P].T @ np.log(P))
 
-        XwX_blocks.append(XwX)
-        XwY_blocks.append(XwY)
+        XwX_blocks.append(N_is/N_all*XwX)
+        XwY_blocks.append(N_is/N_all*XwY)
 
     return XwX_blocks, XwY_blocks
 

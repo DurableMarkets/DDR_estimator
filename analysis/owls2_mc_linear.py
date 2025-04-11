@@ -5,7 +5,7 @@ import logit.monte_carlo_tools.misc_tools as misc_tools
 import logit.monte_carlo_tools.monte_carlo_tools as monte_carlo_tools
 import logit.ddr_tools.dependent_vars as dependent_vars
 import logit.prices.prices as prices
-import logit.estimators.optimal_wls as optimal_wls
+import logit.estimators.optimal_wls2 as optimal_wls
 import jax.numpy as jnp
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -41,15 +41,15 @@ specification = {
     #"buying": None,
     "scrap_correction": (num_consumers, 1),
     "u_0": (num_consumers, num_car_types),
-    "u_a": (num_consumers, 1),
+    "u_a": (num_consumers, num_car_types),
     "u_a_sq": None,
     "u_a_even": None,
 }
 
 # chunk_size and n_periods should be tuned to jax's memory capacity and mc_iter should control the number of observations.
 chunk_size = 100_000
-mc_iter = 1000
-N_mc = 10_000_000 #5_000_000 
+mc_iter = 100
+N_mc = 1_000_000 #5_000_000 
 sample_iter = N_mc * mc_iter // chunk_size
 
 # Estimation_size controls the sample size used in the estimation
@@ -72,8 +72,8 @@ sim_options = {
 }
 
 # stores different sample sizes for multiple monte carlo runs
-Nbars = jnp.arange(0, N_mc,  10**6) +  10**6
-#Nbars = jnp.array([N_mc])
+#Nbars = jnp.arange(0, N_mc,  10**6) +  10**6
+Nbars = jnp.array([N_mc])
 
 # update options and params with number of consumers and car types
 params_update = {
