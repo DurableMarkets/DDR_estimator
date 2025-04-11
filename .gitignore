@@ -18,7 +18,7 @@ __pycache__/
 
 # data folders
 sim_data/*.*
-output/simulations/*
+#output/simulations/*
 
 # Large files
 dta_and_likelihood.mat
