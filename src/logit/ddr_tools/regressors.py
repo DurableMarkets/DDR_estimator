@@ -62,9 +62,8 @@ def create_data_independent_regressors(
     )
 
     # Combine all the flow variables
-
     X_indep = pd.concat([buying, u_0, u_a, u_a_sq, u_a_even, iota], axis=1)
-
+    breakpoint()
     return X_indep, model_specification
 
 
