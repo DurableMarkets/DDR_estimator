@@ -5,7 +5,7 @@ import logit.monte_carlo_tools.misc_tools as misc_tools
 import logit.monte_carlo_tools.monte_carlo_tools as monte_carlo_tools
 import logit.ddr_tools.dependent_vars as dependent_vars
 import logit.prices.prices as prices
-import logit.estimators.optimal_wls2 as optimal_wls
+import logit.estimators.binls as binls
 import jax.numpy as jnp
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -25,7 +25,7 @@ jax.config.update("jax_enable_x64", True)
 pd.set_option("display.max_rows", 705)
 
 # set output directory
-out_dir = "./output/simulations/owls2/"
+out_dir = "./output/simulations/binls/"
 
 # Set options
 
@@ -41,13 +41,13 @@ specification = {
     #"buying": None,
     "scrap_correction": (num_consumers, 1),
     "u_0": (num_consumers, num_car_types),
-    "u_a": (num_consumers, num_car_types),
+    "u_a": (num_consumers, 1),
     "u_a_sq": None,
     "u_a_even": None,
 }
 
 # chunk_size and n_periods should be tuned to jax's memory capacity and mc_iter should control the number of observations.
-chunk_size = 100_000
+chunk_size = 500_000
 mc_iter = 100
 N_mc = 500_000 #5_000_000 
 sample_iter = N_mc * mc_iter // chunk_size
@@ -80,7 +80,7 @@ params_update = {
     "p_fuel": [0.0],
     "acc_0": [-100.0],
     "mum": [0.5, 0.5],
-    "psych_transcost": [2.0, 2.0],
+    "psych_transcost": [4.0, 2.0],
     'u_0': np.array([[12.0,12.0],[12.0,12.0]])
     #'sigma_sell_scrapp': 0.0000000001,
     #'pscrap': [1.0,1.0],
@@ -198,7 +198,7 @@ for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
         X = dependent_vars.combine_regressors(X_indep, X_dep, model_specification)
 
         # Estimate 
-        est = optimal_wls.owls_regression_mc(
+        est = binls.owls_regression_mc(
             ccps=cfps, 
             counts=counts, 
             X=X, 

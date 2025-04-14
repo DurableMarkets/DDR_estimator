@@ -2,6 +2,151 @@ import numpy as np
 from pandas import IndexSlice as idx
 import jax.numpy as jnp
 import pandas as pd
+import jax
+jax.config.update("jax_enable_x64", True)
+
+def owls_regression_mc(X, ccps, counts, model_specification):
+    """This function estimates the parameters of the DDR regression.
+
+    ccp can be any ccp estimator as long as the shape is consistent with
+    state_decision_arrays
+
+    """
+    # Index for zero share rows
+
+    X = X[model_specification]
+    #X = X.values.astype(float)
+
+    logY = np.log(ccps.values.flatten())
+
+    B = estimate_owls(logY, X, ccps, counts)
+    est = pd.DataFrame(B, index=[model_specification], columns=["Coefficient"])
+
+    return est
+
+
+def estimate_owls(Y, X, ccps, counts):
+    """This function estimates the parameters of the DDR regression using the optimal wls weight matrix. 
+
+    """
+    # Index for zero share rows
+    Y = jnp.nan_to_num(Y, nan=0.0)
+    X = X.astype(float)
+    #test_of_covariance_matrices(X, ccps, counts)
+
+    # calc the weights
+    weight_blocks = calculate_weights(ccps, counts)
+    X_indices = X.index.droplevel([level for level in X.index.names if level not in ["consumer_type", "state"]]).unique()
+    
+    #xwx_=np.zeros((114,114))
+    # xwx_test = [X.loc[X_indices[i][0],:,X_indices[i][1], :, :].values.T 
+    #     @ weight_blocks[i] 
+    #     @ X.loc[X_indices[i][0],:,X_indices[i][1], :, :].values 
+    #     for i in range(len(weight_blocks))]
+
+    # xwy_test = [X.loc[X_indices[i][0],:,X_indices[i][1], :, :].values.T 
+    #     @ weight_blocks[i] 
+    #     @ Y.values 
+    #     for i in range(len(weight_blocks))]
+
+
+    # for i in range(len(xwx_test)):
+    #     xwx_+=xwx_test[i]
+
+    xw = jnp.concatenate(
+        [X.loc[X_indices.get_level_values('consumer_type')[i],:,X_indices.get_level_values('state')[i], :, :].values.T 
+        @ weight_blocks[i] for i in range(len(weight_blocks))]
+    ,axis=1)
+
+    xwx = xw @ X.values
+    xwy = xw @ Y
+
+    # WLS regression
+
+    g0 = np.linalg.solve(xwx, xwy)
+    #breakpoint()
+    return g0
+    
+
+
+def calculate_weights(ccps, counts):
+    
+
+    # initialize 
+    N = counts.groupby(
+        ["consumer_type", "state"]
+    ).sum()
+    N_all = counts.sum()
+    if counts.min() == 0:
+        raise ValueError("Counts cannot be zero.")
+
+    weight_blocks = []
+    for i in range(N.shape[0]):
+        consumer_type, state=N.index[i]
+        P = ccps.loc[idx[consumer_type, state, :]].values
+        K = P.shape[0]
+        N_is = N.loc[N.index[i]]
+
+        # A is the pseudo-inverse of B 
+        A= (
+           np.diag(P)
+           @
+           (np.identity(K) - 1/K * np.ones((K,K)))
+           @ np.diag(1/P) 
+           @ (np.identity(K) - 1/K * np.ones((K,K))) 
+           @ np.diag(P)
+        )
+        Pcol=np.c_[P]
+        ocol = np.c_[np.ones(K)]
+        test = 1/K**2 * Pcol @ ocol.T @ np.diag(1/P) @ ocol @ Pcol.T
+        #breakpoint()
+
+        #breakpoint()
+        #A = (np.diag(P) - 1/K * np.c_[P] @ np.c_[np.ones(K)].T - 1/K * np.c_[np.ones(K)] @ np.c_[P].T) # this works well
+        #A = np.diag(P) - 1/K * np.ones((K,K))
+        #A= np.diag(P) # This just works the best...
+        #A = np.diag(P) - np.c_[P] @ np.c_[P].T
+        B = np.diag(1/P) - np.ones((K,K))
+        #A = np.linalg.pinv(B) 
+        ABA=A @ B @ A 
+        #breakpoint()
+        # Symmetry check
+        np.allclose(A.T, A)
+
+        np.allclose(A, ABA)
+
+        # type 1
+         
+
+        # type 2
+
+        #A = N_is/N_all*np.diag(P) - np.c_[P] * np.c_[P].T # This works the best so far but is technically wrong...
+        #A = N_is/N_all*(np.diag(P) - np.c_[P] * np.c_[P].T) 
+        #A = (np.diag(P) - np.c_[P] * np.c_[P].T)
+
+        # Test 1
+        #A= N_is/N_all * (np.identity(K))
+        #A=  (np.identity(K))
+
+        # A= (
+        #     np.diag(P)
+        #     @(np.identity(K) - np.ones((K,K)))
+        #     @ np.diag(1/P) 
+        #     @ (np.identity(K) - 1/K * np.ones((K,K))) 
+        #     @ np.diag(P)
+        # )
+        # Test 2 
+        # Try N_is/N diag(p_sd - p_sd**2)
+
+        #A = 1/N_is *(np.diag(P) - np.c_[P] * np.r_[P])
+        #A = np.diag(P) - np.c_[P] * np.r_[P]
+        #A = np.diag(1/P) - np.ones((K,K))
+
+        #A = np.identity(K)
+        weight_blocks.append(A)
+
+    return weight_blocks
+
 
 def playground_test_of_pseudo_inverses(ccps, counts):
     # calc weights
@@ -57,97 +202,34 @@ def playground_test_of_pseudo_inverses(ccps, counts):
 
     return weights
 
-def owls_regression_mc(X, ccps, counts, model_specification):
-    """This function estimates the parameters of the DDR regression.
-
-    ccp can be any ccp estimator as long as the shape is consistent with
-    state_decision_arrays
-
-    """
-    # Index for zero share rows
-
-    X = X[model_specification]
-    #X = X.values.astype(float)
-
-    logY = np.log(ccps.values.flatten())
-
-    B = estimate_owls(logY, X, ccps, counts)
-    est = pd.DataFrame(B, index=[model_specification], columns=["Coefficient"])
-
-    return est
 
 
-def estimate_owls(Y, X, ccps, counts):
-    """This function estimates the parameters of the DDR regression using the optimal wls weight matrix. 
+def test_of_covariance_matrices(X, ccps, counts):
 
-    """
-    # Index for zero share rows
-    Y = jnp.nan_to_num(Y, nan=0.0)
-    X = X.astype(float)
-    
-    # calc the weights
-    weight_blocks = calculate_weights(ccps, counts)
+    P = ccps.loc[0,0,:].values
+    K = P.shape[0]
+    #X = X.loc[0,:,0,:,:].values
+
+    # diag(P)
     X_indices = X.index.droplevel([level for level in X.index.names if level not in ["consumer_type", "state"]]).unique()
-    #breakpoint()
-    xw = jnp.concatenate(
+    xdiagp = jnp.concatenate(
         [X.loc[X_indices[i][0],:,X_indices[i][1], :, :].values.T 
-        @ weight_blocks[i] for i in range(len(weight_blocks))]
+        @ np.diag(ccps.loc[X_indices[i][0], X_indices[i][1], :]) for i in range(len(X_indices))]
     ,axis=1)
-    xwx = xw @ X.values
-    xwy = xw @ Y
-
-    # WLS regression
-
-    g0 = np.linalg.solve(xwx, xwy)
-
-    return g0
+   # breakpoint()
+    xdiagpx = xdiagp @ X.values
     
+    xpp = jnp.concatenate(
+        [X.loc[X_indices[i][0],:,X_indices[i][1], :, :].values.T 
+        @ np.c_[ccps.loc[X_indices[i][0], X_indices[i][1], :]] 
+        @ np.c_[ccps.loc[X_indices[i][0], X_indices[i][1], :]].T for i in range(len(X_indices))]
+        ,axis=1)
 
+    xppx = xpp @ X.values
+    #breakpoint()
+    covdiagP=np.linalg.inv(xdiagpx) - np.linalg.inv(xdiagpx) @ xppx @ np.linalg.inv(xdiagpx)
+    # diag
 
-def calculate_weights(ccps, counts):
-    
-
-    # initialize 
-    N = counts.groupby(
-        ["consumer_type", "state"]
-    ).sum()
-    N_all = counts.sum()
-
-    weight_blocks = []
-    for i in range(N.shape[0]):
-        consumer_type, state=N.index[i]
-        P = ccps.loc[idx[consumer_type, state, :]].values
-        K = P.shape[0]
-        N_is = N.loc[N.index[i]]
-        # A is the pseudo-inverse of B 
-        A= N_is/N_all * (
-           np.diag(P)
-           @
-           (np.identity(K) - 1/K * np.ones((K,K)))
-           @ np.diag(1/P) 
-           @ (np.identity(K) - 1/K * np.ones((K,K))) 
-           @ np.diag(P)
-        )
-
-        # Test 1
-        #A= N_is/N_all * (np.identity(K))
-        #A=  (np.identity(K))
-
-        # A= (
-        #     np.diag(P)
-        #     @(np.identity(K) - np.ones((K,K)))
-        #     @ np.diag(1/P) 
-        #     @ (np.identity(K) - 1/K * np.ones((K,K))) 
-        #     @ np.diag(P)
-        # )
-        # Test 2 
-        # Try N_is/N diag(p_sd - p_sd**2)
-
-        #A = 1/N_is *(np.diag(P) - np.c_[P] * np.r_[P])
-        #A = np.diag(P) - np.c_[P] * np.r_[P]
-
-        #A = np.identity(K)
-        weight_blocks.append(A)
-
-    return weight_blocks
-
+    covpinv=np.linalg.inv(xdiagpx - xppx)
+    # both are singular... I think this cannot be done, since we are only considering one state
+    return weights
