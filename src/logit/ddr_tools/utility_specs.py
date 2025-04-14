@@ -81,7 +81,7 @@ def create_u_0(
                 pd.IndexSlice[ntype, :, :, ncartype, :], car_type_cols_looper[ntype][ncartype-1]
             ] = (
                 car_type_dummies.loc[pd.IndexSlice[ntype, :, :, ncartype, :], f'car_type_{ncartype}'].values.astype(int)
-)
+    )
 
     return X, car_type_cols_flatten
 
@@ -131,7 +131,7 @@ def create_u_a_sq(
     options,
     specification,
 ):
-    if specification['u_a'] is None:
+    if specification['u_a_sq'] is None:
         return None, None
         
     # Constructing the columns
@@ -169,7 +169,7 @@ def create_u_a_even(
     options,
     specification,
 ):
-    if specification['u_a'] is None:
+    if specification['u_a_even'] is None:
         return None, None
         
     # Constructing the columns
