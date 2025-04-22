@@ -5,7 +5,7 @@ import logit.monte_carlo_tools.misc_tools as misc_tools
 import logit.monte_carlo_tools.monte_carlo_tools as monte_carlo_tools
 import logit.ddr_tools.dependent_vars as dependent_vars
 import logit.prices.prices as prices
-import logit.estimators.binls as binls
+import logit.estimators.pwls as pwls
 import jax.numpy as jnp
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -25,7 +25,7 @@ jax.config.update("jax_enable_x64", True)
 pd.set_option("display.max_rows", 705)
 
 # set output directory
-out_dir = "./output/simulations/binls/"
+out_dir = "./output/simulations/pwls/"
 
 # Set options
 
@@ -198,7 +198,7 @@ for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
         X = dependent_vars.combine_regressors(X_indep, X_dep, model_specification)
 
         # Estimate 
-        est, est_post = binls.owls_regression_mc(
+        est, est_post = pwls.owls_regression_mc(
             ccps=cfps, 
             counts=counts, 
             X=X, 
@@ -320,16 +320,17 @@ stats.round(4).to_markdown(out_dir + "mc_table.md")
 est_post = pd.concat(est_posts, axis=0)
 plt.figure(figsize=(25.6,14.4))
 plt.scatter(est_post['ccps'], est_post['residuals'], marker='.')
-plt.title('binls residuals')
+plt.title('pWLS residuals')
 plt.xlabel("CCPs")
 plt.ylabel("Residuals")
 plt.savefig(out_dir + "errors.png", dpi=100, bbox_inches="tight")
 
 # Plotting them in a density plot
+# Plotting them in a density plot
 plt.figure(figsize=(25.6,14.4))
 plt.hist(est_post['residuals'], bins=100, density=True, alpha=0.5, color='blue', label='res')
-#plt.hist(np.exp(est_post['residuals']), bins=100, density=True, alpha=0.5, color='red', label='exp(res) - 1 ')
-plt.title('binls residuals')
+plt.hist(np.exp(est_post['residuals']) - 1, bins=100, density=True, alpha=0.5, color='red', label='exp(res) - 1')
+plt.title('pwls residuals')
 plt.xlabel("Residuals") 
 plt.legend()
 plt.savefig(out_dir + "errors_density.png", dpi=100, bbox_inches="tight")

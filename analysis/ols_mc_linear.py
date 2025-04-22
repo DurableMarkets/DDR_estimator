@@ -49,7 +49,7 @@ specification = {
 # chunk_size and n_periods should be tuned to jax's memory capacity and mc_iter should control the number of observations.
 chunk_size = 500_000
 mc_iter = 100
-N_mc = 2_500_000 #5_000_000 
+N_mc = 1_000_000 #5_000_000 
 sample_iter = N_mc * mc_iter // chunk_size
 
 # Estimation_size controls the sample size used in the estimation
@@ -138,7 +138,7 @@ X_indep, model_specification = regressors.create_data_independent_regressors(
 
 
 # mc simulation
-ests = []
+ests, est_posts = [], []
 df_idx = df.index
 #TODO: Strange that the indices are named differently across the data df and the main_df...
 # Loops over monte carlos of different sizes
@@ -198,7 +198,7 @@ for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
         X = dependent_vars.combine_regressors(X_indep, X_dep, model_specification)
 
         # Estimate 
-        est = ols.owls_regression_mc(
+        est, est_post = ols.owls_regression_mc(
             ccps=cfps, 
             counts=counts, 
             X=X, 
@@ -211,6 +211,17 @@ for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
         est = est.set_index(["Nbar", "mc_iter"], append=True)
 
         ests.append(est)
+
+        est_post["mc_iter"] = i
+        est_post["Nbar"] = int(Nbar)
+        est_post = est_post.reset_index().set_index(
+            ["Nbar", "mc_iter"]+
+            ['consumer_type', 'decision', 'state', 
+             'car_type_post_decision', 'car_age_post_decision'],
+            append=True
+        )
+        est_posts.append(est_post)
+
 
 # Extract true parameters
 true_params=monte_carlo_tools.extract_true_structural_parameters(model_solution, model_struct_arrays, params, options)
@@ -304,6 +315,20 @@ stats = pd.concat([true_params, means, stds, p_025, p_975], axis=1)
 
 stats.round(4).to_latex(out_dir + "mc_table.tex", escape=False)
 stats.round(4).to_markdown(out_dir + "mc_table.md")
+
+# plotting errors
+est_post = pd.concat(est_posts, axis=0)
+plt.figure(figsize=(25.6,14.4))
+plt.scatter(est_post['ccps'], est_post['residuals'], marker='.')
+plt.title('optimal WLS residuals')
+plt.xlabel("CCPs")
+plt.ylabel("Residuals")
+plt.savefig(out_dir + "errors.png", dpi=100, bbox_inches="tight")
+
+
+
+
+
 #
 #
 # # Build a violin plot of the estimates for each parameter.

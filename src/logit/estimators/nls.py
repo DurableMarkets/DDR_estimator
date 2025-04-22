@@ -46,7 +46,16 @@ def estimate_owls(Y, X, ccps, counts):
 
     g0 = np.linalg.solve(xwx, xwy)
 
-    return g0
+    preds = X.values @ g0
+    residuals = Y - preds
+    est_post=pd.DataFrame(
+        data={'preds':preds,
+              'residuals': 
+              residuals, 
+              'Y': Y,
+              'ccps': ccps.values}, index=X.index)
+
+    return g0, est_post
     
 
 

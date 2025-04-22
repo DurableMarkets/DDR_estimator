@@ -82,7 +82,7 @@ def estimate_owls(Y, X, ccps, counts):
     xwy = jnp.concatenate(XwY_blocks, axis=0)
     
     # WLS regression
-    breakpoint()
+    #breakpoint()
     g0 = np.linalg.solve(xwx, xwy)
 
     return g0

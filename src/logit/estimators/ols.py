@@ -17,10 +17,10 @@ def owls_regression_mc(X, ccps, counts, model_specification):
 
     logY = np.log(ccps.values.flatten())
 
-    B = estimate_owls(logY, X, ccps, counts)
+    B, est_post = estimate_owls(logY, X, ccps, counts)
     est = pd.DataFrame(B, index=[model_specification], columns=["Coefficient"])
 
-    return est
+    return est, est_post
 
 
 def estimate_owls(Y, X, ccps, counts):
@@ -45,9 +45,17 @@ def estimate_owls(Y, X, ccps, counts):
     # WLS regression
 
     g0 = np.linalg.solve(xwx, xwy)
-    #breakpoint()
 
-    return g0
+    preds = X.values @ g0
+    residuals = Y - preds
+    est_post=pd.DataFrame(
+        data={'preds':preds,
+              'residuals': 
+              residuals, 
+              'Y': Y,
+              'ccps': ccps.values}, index=X.index)
+
+    return g0, est_post
     
 
 

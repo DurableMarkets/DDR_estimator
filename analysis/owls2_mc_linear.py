@@ -47,9 +47,9 @@ specification = {
 }
 
 # chunk_size and n_periods should be tuned to jax's memory capacity and mc_iter should control the number of observations.
-chunk_size = 100_000
+chunk_size = 500_000
 mc_iter = 100
-N_mc = 500_000 #5_000_000 
+N_mc = 1_000_000 #5_000_000 
 sample_iter = N_mc * mc_iter // chunk_size
 
 # Estimation_size controls the sample size used in the estimation
@@ -76,12 +76,28 @@ sim_options = {
 Nbars = jnp.array([N_mc])
 
 # update options and params with number of consumers and car types
+
+sim_options = {
+    "n_agents": chunk_size * sample_iter,  # 226675,
+    "n_periods": 1,
+    "seed": 123,
+    "chunk_size": chunk_size,
+    "estimation_size": estimation_size,
+    "use_count_data": True,
+}
+
+# stores different sample sizes for multiple monte carlo runs
+#Nbars = jnp.arange(0, N_mc,  10**6) +  10**6
+Nbars = jnp.array([N_mc])
+
+# update options and params with number of consumers and car types
 params_update = {
     "p_fuel": [0.0],
     "acc_0": [-100.0],
     "mum": [0.5, 0.5],
-    "psych_transcost": [2.0, 2.0],
-    'u_0': np.array([[12.0,12.0],[12.0,12.0]])
+    "psych_transcost": [4.0, 2.0],
+    'u_0': np.array([[12.0,12.0],[12.0,12.0]]),
+    #'u_a': np.array([-0.5,-0.5]),
     #'sigma_sell_scrapp': 0.0000000001,
     #'pscrap': [1.0,1.0],
 }
@@ -92,6 +108,7 @@ options_update = {
     "max_age_of_car_types": [25],
     "tw": [0.5, 0.5],
 }
+
 params, options = jpe_model["update_params_and_options"](
     params=params_update, options=options_update
 )

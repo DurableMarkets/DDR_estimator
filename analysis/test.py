@@ -80,8 +80,9 @@ params_update = {
     "p_fuel": [0.0],
     "acc_0": [-100.0],
     "mum": [0.5, 0.5],
-    "psych_transcost": [2.0, 2.0],
-    'u_0': np.array([[12.0,12.0],[12.0,12.0]])
+    "psych_transcost": [4.0, 2.0],
+    'u_0': np.array([[12.0,12.0],[12.0,12.0]]),
+    #'u_a': np.array([-0.5,-0.5]),
     #'sigma_sell_scrapp': 0.0000000001,
     #'pscrap': [1.0,1.0],
 }
@@ -192,12 +193,14 @@ X = dependent_vars.combine_regressors(X_indep, X_dep, model_specification)
 
 #optimal_wls_weights = optimal_wls.calculate_weights(ccps=cfps, counts=counts)
 
+optimal_wls.test_of_covariance_matrices(X, cfps, counts)
 optimal_wls.playground_test_of_pseudo_inverses(
     ccps=cfps,
     counts=counts, 
     #X=X, 
     #model_specification=model_specification
     )
+
 
 oest=optimal_wls.owls_regression_mc(ccps=cfps, counts=counts, X=X, model_specification=model_specification)
 west=wls_estimation.wls_regression_mc(ccps=cfps, counts=counts, X=X, model_specification=model_specification)
