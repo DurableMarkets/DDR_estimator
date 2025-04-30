@@ -13,6 +13,12 @@ def owls_regression_mc(X, ccps, counts, model_specification):
 
     """
     # Index for zero share rows
+    I=(counts != 0).values
+
+    ccps = ccps.loc[I] # removes all 0 counts
+    counts = counts.loc[I] # removes all 0 counts
+
+    X = X[model_specification].loc[I]
 
     X = X[model_specification]
     #X = X.values.astype(float)
@@ -32,12 +38,13 @@ def estimate_owls(Y, X, ccps, counts):
     # Index for zero share rows
     Y = jnp.nan_to_num(Y, nan=0.0)
     X = X.astype(float)
+
     #test_of_covariance_matrices(X, ccps, counts)
 
     # calc the weights
     weight_blocks = calculate_weights(ccps, counts)
     X_indices = X.index.droplevel([level for level in X.index.names if level not in ["consumer_type", "state"]]).unique()
-    
+
     #xwx_=np.zeros((114,114))
     # xwx_test = [X.loc[X_indices[i][0],:,X_indices[i][1], :, :].values.T 
     #     @ weight_blocks[i] 
@@ -72,13 +79,13 @@ def estimate_owls(Y, X, ccps, counts):
 
     # singularity checks
     np.allclose(x_uwx_ev.T, x_evwx_u) # symmetry check
-    np.linalg.det(x_uwx_u)
-    np.linalg.det(x_evwx_ev)
+    #np.linalg.det(x_uwx_u)
+    #np.linalg.det(x_evwx_ev)
     #breakpoint()    
 
     # WLS regression
-    #g0 = np.linalg.solve(xwx, xwy)
-    g0= np.linalg.lstsq(xwx, xwy)[0]
+    g0 = np.linalg.solve(xwx, xwy)
+    #g0= np.linalg.lstsq(xwx, xwy)[0]
     #breakpoint()
     preds = X.values @ g0
     residuals = Y - preds
@@ -87,7 +94,11 @@ def estimate_owls(Y, X, ccps, counts):
               'residuals': 
               residuals, 
               'Y': Y,
-              'ccps': ccps.values}, index=X.index)
+              'ccps': ccps.values, 
+              'counts': counts.values,
+              },
+              index=X.index
+    )
 
     return g0, est_post
     
@@ -168,25 +179,76 @@ def calculate_weights(ccps, counts):
         #A = np.diag(P) - np.c_[P] @ np.c_[P].T/ P[-1] # P[-1] is the purge decision
 
         #A=(np.diag(P) - 1/K *np.c_[P] @ np.c_[P].T) 
-
+        A = (
+            (np.ones(K) + 1/np.sum(P**2) *  np.c_[P] @ np.c_[P].T )
+            @ np.diag(P)
+            @ (np.ones(K) + 1/np.sum(P**2) *  np.c_[P] @ np.c_[P].T )
+        )
+             #np.diag(P) - 1/K * np.c_[P] @ np.c_[P].T # This one is not a generalized inverse but it works well.
         #A = np.diag(P**2) # This one because it would equivalent to minimizing the squared conjugate social surplus. 
+        A =(    
+            np.diag(P)
+            - 1/np.sum(P**2) * np.c_[P] @ np.c_[P].T @ np.diag(P)  
+            - 1/np.sum(P**2) * np.diag(P) @ np.c_[P] @ np.c_[P].T  
+            - np.sum(P**3)/(np.sum(P**2)**2) * np.c_[P] @ np.c_[P].T 
+        )
+        # This one works well, (not better than P). I havent checked if its a generalized inverse, but is derived based on the matrix cookbook. 
+        # It is a generalized inverse of P - ee.T but unfortunately not the other way around.
+        # I think there was a sign error so we should get. 
+        # these two seem to be similar...
+        
+        # A =(
+        #     np.diag(P)
+        #     - 1/np.sum(P**2) * np.c_[P] @ np.c_[P].T @ np.diag(P)  
+        #     - 1/np.sum(P**2) * np.diag(P) @ np.c_[P] @ np.c_[P].T  
+        #     + np.sum(P**3)/(np.sum(P**2)**2) * np.c_[P] @ np.c_[P].T 
+        # )
 
-        #breakpoint()
+        # This one is a reflexive generalized inverse of P - ee.T.
+        # A =(
+        # (np.identity(K) - 1/np.sum(P**2) * np.c_[P] @ np.c_[P].T) 
+        # @ np.diag(P)
+        # @(np.identity(K) - 1/np.sum(P**2) * np.c_[P] @ np.c_[P].T) 
+        # )
+        # but seems to be unstable
+
+        # This works well...
+        # A =(
+        # (np.identity(K) -  np.c_[P] @ np.c_[P].T) 
+        # @ np.diag(P)
+        # @(np.identity(K) - np.c_[P] @ np.c_[P].T) 
+        # )
+
+        A = (
+        (np.identity(K) -  1/np.sum(P**2) *np.c_[P] @ np.c_[P].T) 
+        @ np.diag(P)
+        @(np.identity(K) - 1/np.sum(P**2) *np.c_[P] @ np.c_[P].T) 
+        )
+
+
+        # #if check_if_reflexive_generalized_inverse(A, np.diag(1/P) - np.ones((K,K))) == False: 
+        #     print("Not reflexive generalized inverse")
+        # if check_if_symmetric(A, np.diag(1/P) - np.ones((K,K))) == True:
+        #     print("Not symmetric")
+
 
         # It is the last_term that just messes everything up. I think it must be numerically very unstable or something
-        second_term = - 1/K * (np.c_[P] @ np.c_[np.ones(K)].T +  np.c_[np.ones(K)] @ np.c_[P].T) 
-        last_term = 1/(K**2) * np.c_[P] @ np.c_[np.ones(K)].T @ np.diag(1/P) @ np.c_[np.ones(K)] @ np.c_[P].T
+    
+        #second_term = - 1/K * (np.c_[P] @ np.c_[np.ones(K)].T +  np.c_[np.ones(K)] @ np.c_[P].T) 
+        #last_term = 1/(K**2) * np.c_[P] @ np.c_[np.ones(K)].T @ np.diag(1/P) @ np.c_[np.ones(K)] @ np.c_[P].T
+        
         #A = np.diag(P) +  second_term + last_term
         #breakpoint()
         #np.diag(P) @ np.ones((K,K)) @ np.diag(1/P) @ np.ones((K,K)) @ np.diag(P)
         #breakpoint()
-        #A = np.diag(P) - 1/K
+        #A = np.identity(K)
         #breakpoint()
 
         #breakpoint()
         #A = (np.diag(P) - 1/K * np.c_[P] @ np.c_[np.ones(K)].T - 1/K * np.c_[np.ones(K)] @ np.c_[P].T) # this works well
         #A = np.diag(P) - 1/K * np.ones((K,K))
         #A= np.diag(P) # This just works the best...
+
         #A = np.identity(K)
         #A = np.diag(P) - np.c_[P] @ np.c_[P].T
         # B = np.diag(1/P) - np.ones((K,K))
@@ -230,6 +292,16 @@ def calculate_weights(ccps, counts):
 
     return weight_blocks
 
+def check_if_reflexive_generalized_inverse(A,B):
+    ABA=A @ B @ A 
+    BAB=B @ A @ B
+    return np.all([np.allclose(A, ABA), np.allclose(BAB, B)])
+def check_if_symmetric(A,B):
+    AB=A @ B 
+    BA=B @ A 
+    return np.all([np.allclose(AB,AB.T), np.allclose( BA, BA.T)])
+
+
 
 def playground_test_of_pseudo_inverses(ccps, counts):
     # calc weights
@@ -270,26 +342,30 @@ def playground_test_of_pseudo_inverses(ccps, counts):
     )
     A = np.diag(P) - np.c_[P] @ np.c_[P].T/ P[-1] # P[-1] is the purge decision
     A = np.diag(P) - np.c_[P] @ np.c_[P].T # P[-1] is the purge decision
-    B = np.diag(1/P) - np.ones((K,K))
     B = np.diag(1/P)
+    
+    B = np.diag(1/P) - np.ones((K,K))
+    A =(
+        np.diag(P)
+        - 1/np.sum(P**2) * np.c_[P] @ np.c_[P].T @ np.diag(P)  
+        - 1/np.sum(P**2) * np.diag(P) @ np.c_[P] @ np.c_[P].T  
+        - np.sum(P**3)/(np.sum(P**2)**2) * np.c_[P] @ np.c_[P].T 
+    )
+
+    A =(
+    (np.identity(K) - 1/np.sum(P**2) * np.c_[P] @ np.c_[P].T) 
+    @ np.diag(P)
+    @(np.identity(K) - 1/np.sum(P**2) * np.c_[P] @ np.c_[P].T) 
+    )
+
+
     ABA=A @ B @ A 
-    breakpoint()
-    # Symmetry check
-    np.allclose(A.T, A)
+    BAB=B @ A @ B
 
-    np.allclose(A, ABA)
+    print(np.allclose(A, ABA))
+    print(np.allclose(BAB, B))
 
-    # test if qqt P    ee.T is equal to qq.t 
-
-    test1=np.c_[P] @ np.c_[P].T @ np.diag(P) @ np.ones((K,K))
-    test2 = np.c_[P] @ np.c_[P].T
-    np.allclose(test1, test2)   
-
-    BAB=B @ A @ B 
-
-    np.allclose(B, BAB)
-
-    return weights
+    return None
 
 
 
@@ -299,7 +375,6 @@ def test_of_covariance_matrices(X, ccps, counts):
 
     # diag(P)
     X_indices = X.index.droplevel([level for level in X.index.names if level not in ["consumer_type", "state"]]).unique()
-    breakpoint()
 
     weights=calculate_weights(ccps, counts)
 
@@ -336,10 +411,10 @@ def test_of_covariance_matrices(X, ccps, counts):
     cand = np.linalg.inv(xdiagpx) @ (xdiagpx - xppx) @ np.linalg.inv(xdiagpx)
     B_sword = np.linalg.pinv(B)
     np.allclose(B_sword, xdiagpx)
-    breakpoint()
+
     ABA = A @ B @ A
     BAB = B @ A @ B
-    breakpoint()
+
     np.allclose(A, ABA)
     np.allclose(B, BAB)
 

@@ -48,8 +48,8 @@ specification = {
 
 # chunk_size and n_periods should be tuned to jax's memory capacity and mc_iter should control the number of observations.
 chunk_size = 500_000
-mc_iter = 1
-N_mc = 500_000 #5_000_000 
+mc_iter = 100
+N_mc = 1_000_000 #5_000_000 
 sample_iter = N_mc * mc_iter // chunk_size
 
 # Estimation_size controls the sample size used in the estimation
@@ -206,4 +206,3 @@ oest=optimal_wls.owls_regression_mc(ccps=cfps, counts=counts, X=X, model_specifi
 west=wls_estimation.wls_regression_mc(ccps=cfps, counts=counts, X=X, model_specification=model_specification)
 
 
-breakpoint()

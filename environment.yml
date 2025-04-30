@@ -16,7 +16,7 @@ dependencies:
   # Tools
   - black
   - flake8
-  - pdbpp
+  - pdbpp==0.10.3
   - pre-commit
   - toml
   - tqdm

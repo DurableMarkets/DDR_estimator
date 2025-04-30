@@ -13,9 +13,15 @@ def owls_regression_mc(X, ccps, counts, model_specification):
 
     """
     # Index for zero share rows
+    I=(counts != 0).values
+
+    ccps = ccps.loc[I] # removes all 0 counts
+    counts = counts.loc[I] # removes all 0 counts
+
+    X = X[model_specification].loc[I]
+
 
     X = X[model_specification]
-    #X = X.values.astype(float)
 
     logY = np.log(ccps.values.flatten())
 
@@ -55,7 +61,10 @@ def estimate_owls(Y, X, ccps, counts):
               'residuals': 
               residuals, 
               'Y': Y,
-              'ccps': ccps.values}, index=X.index)
+              'ccps': ccps.values, 
+              'counts': counts.values},
+              index=X.index
+    )
 
     return g0, est_post
     

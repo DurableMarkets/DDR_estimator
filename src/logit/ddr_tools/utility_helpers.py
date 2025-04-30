@@ -13,7 +13,7 @@ def construct_utility_colnames(utility_type, variable_str, specification, option
         cols = [variable_str.format("all", "all")]
         cols_for_utility_funcs=[
             [
-                variable_str.format(all, 'all')
+                variable_str.format('all', 'all')
                 for _ in range(1, options["n_car_types"] + 1)
             ]
             for _ in range(0, options["n_consumer_types"])
