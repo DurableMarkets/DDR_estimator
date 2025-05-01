@@ -180,18 +180,18 @@ def calculate_weights(ccps, counts):
 
         #A=(np.diag(P) - 1/K *np.c_[P] @ np.c_[P].T) 
         A = (
-            (np.ones(K) + 1/np.sum(P**2) *  np.c_[P] @ np.c_[P].T )
+            (np.identity(K) + 1/np.sum(P**2) *  np.c_[P] @ np.c_[P].T )
             @ np.diag(P)
-            @ (np.ones(K) + 1/np.sum(P**2) *  np.c_[P] @ np.c_[P].T )
+            @ (np.identity(K) + 1/np.sum(P**2) *  np.c_[P] @ np.c_[P].T )
         )
              #np.diag(P) - 1/K * np.c_[P] @ np.c_[P].T # This one is not a generalized inverse but it works well.
         #A = np.diag(P**2) # This one because it would equivalent to minimizing the squared conjugate social surplus. 
-        A =(    
-            np.diag(P)
-            - 1/np.sum(P**2) * np.c_[P] @ np.c_[P].T @ np.diag(P)  
-            - 1/np.sum(P**2) * np.diag(P) @ np.c_[P] @ np.c_[P].T  
-            - np.sum(P**3)/(np.sum(P**2)**2) * np.c_[P] @ np.c_[P].T 
-        )
+        # A =(    
+        #     np.diag(P)
+        #     - 1/np.sum(P**2) * np.c_[P] @ np.c_[P].T @ np.diag(P)  
+        #     - 1/np.sum(P**2) * np.diag(P) @ np.c_[P] @ np.c_[P].T  
+        #     - np.sum(P**3)/(np.sum(P**2)**2) * np.c_[P] @ np.c_[P].T 
+        # )
         # This one works well, (not better than P). I havent checked if its a generalized inverse, but is derived based on the matrix cookbook. 
         # It is a generalized inverse of P - ee.T but unfortunately not the other way around.
         # I think there was a sign error so we should get. 
@@ -300,8 +300,6 @@ def check_if_symmetric(A,B):
     AB=A @ B 
     BA=B @ A 
     return np.all([np.allclose(AB,AB.T), np.allclose( BA, BA.T)])
-
-
 
 def playground_test_of_pseudo_inverses(ccps, counts):
     # calc weights

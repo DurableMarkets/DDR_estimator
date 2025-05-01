@@ -35,7 +35,7 @@ def estimate_owls(Y, X, ccps, counts, eps):
     #test_of_covariance_matrices(X, ccps, counts)
 
     # calc the weights
-    weight_blocks = calculate_weights(ccps, counts)
+    weight_blocks = calculate_weights(ccps, counts, eps)
     X_indices = X.index.droplevel([level for level in X.index.names if level not in ["consumer_type", "state"]]).unique()
     
     #xwx_=np.zeros((114,114))
@@ -59,7 +59,7 @@ def estimate_owls(Y, X, ccps, counts, eps):
     ,axis=1)
     #    breakpoint()
 
-    xwx = xw @ X.values + eps * np.identity(xw.shape[0])
+    xwx = xw @ X.values 
     xwy = xw @ Y
 
     # WLS regression
@@ -79,7 +79,7 @@ def estimate_owls(Y, X, ccps, counts, eps):
     
 
 
-def calculate_weights(ccps, counts):
+def calculate_weights(ccps, counts, eps):
     
 
     # initialize 
@@ -97,17 +97,12 @@ def calculate_weights(ccps, counts):
         K = P.shape[0]
         N_is = N.loc[N.index[i]]
 
-        # A is the pseudo-inverse of B 
-        A= (
-           np.diag(P)
-           @
-           (np.identity(K) - 1/K * np.ones((K,K)))
-           @ np.diag(1/P) 
-           @ (np.identity(K) - 1/K * np.ones((K,K))) 
-           @ np.diag(P)
+        A = (
+            (np.identity(K) + eps/np.sum(P**2) *  np.c_[P] @ np.c_[P].T )
+            @ np.diag(P)
+            @ (np.identity(K) + eps/np.sum(P**2) *  np.c_[P] @ np.c_[P].T )
         )
 
-        A = np.diag(P) - np.c_[P] @ np.c_[P].T 
 
         weight_blocks.append(A)
 
