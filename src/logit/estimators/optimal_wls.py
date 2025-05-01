@@ -20,7 +20,6 @@ def owls_regression_mc(X, ccps, counts, model_specification):
 
     X = X[model_specification].loc[I]
 
-    X = X[model_specification]
     #X = X.values.astype(float)
 
     logY = np.log(ccps.values.flatten())

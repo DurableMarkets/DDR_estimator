@@ -85,7 +85,7 @@ df_idx = df.index
 # Loops over monte carlos of different sizes
 Nbar = Nbars[0]
 epss = np.arange(0,1.1, 0.1)
-breakpoint()
+
 for eps in tqdm(epss, desc="Monte Carlo studies"):
     # redefining sim_options
     sim_options["estimation_size"] = Nbar
@@ -160,8 +160,9 @@ for eps in tqdm(epss, desc="Monte Carlo studies"):
         #breakpoint()
         est_post["mc_iter"] = i
         est_post["Nbar"] = int(Nbar)
+        est_post["eps"] = eps
         est_post = est_post.reset_index().set_index(
-            ["Nbar", "mc_iter"]+
+            ["Nbar", "mc_iter",'eps']+
             ['consumer_type', 'decision', 'state', 
              'car_type_post_decision', 'car_age_post_decision'],
             append=True
@@ -196,6 +197,8 @@ for i, tuple in enumerate(tuples):
     means.loc[idx[tuple], "mean"] = mc_options['mc_iter']
 
 # long table
+means = runs.groupby(["coefficients", "eps"], sort=False).mean()
+means = means.rename(columns={"Estimates": "mean"})
 stds = runs.groupby(["coefficients", "eps"], sort=False).std()
 stds = stds.rename(columns={"Estimates": "std"})
 p_025 = runs.groupby(["coefficients", "eps"], sort=False).quantile(0.025)
@@ -205,6 +208,7 @@ p_975 = p_975.rename(columns={"Estimates": "p97.5"})
 # stats = pd.concat([true_est, means, stds, p_025, p_975], axis=1)
 stats = pd.concat([means, stds, p_025, p_975], axis=1)
 #
+#breakpoint()
 # # adding true values:
 varnames = stats.index.get_level_values('coefficients').to_list()
 tuples = list(zip(varnames, ["true values"] * len(varnames)))
@@ -213,73 +217,40 @@ true_params_df['eps'] = 'true value'
 true_params_df = true_params_df.set_index(['coefficients', 'eps'])
 true_params_df = true_params_df.rename(columns={'true values': 'mean'})
 true_params_df = true_params_df[['mean']]
-breakpoint()
 stats = pd.concat([stats, true_params_df], axis=0)
-
-#idx = pd.IndexSlice
-#for i, tuple in enumerate(tuples):
-#    breakpoint()
-#    stats.loc[idx[tuple], "mean"] = true_params['true values'].loc[tuple[0]]
-#breakpoint()
-#stats.index = stats.index.set_levels(
-#    pd.Categorical(
-#        stats.index.levels[0],
-#        categories=true_params.index.tolist() + ["Sample size", "MC iterations"],
-#        ordered=True,
-#    ),
-#    level=0,
-#)
-#stats = stats.sort_index(level=0)
-
-# stats = stats.sort_index(
-#     level=["coefficients", "eps"], ascending=[True, True]
-# ).reset_index()
+stats.sort_index(level=0, ascending=True, inplace=True)
+stats.reset_index(inplace=True)
 
 
-# stats.round(4).to_latex(out_dir + "mc_table_long.tex", escape=False)
-# stats.round(4).to_markdown(out_dir + "mc_table_long.md")
-# # short table:
-# largest_Nbar = int(Nbars.max())
-# runs_largest = runs.loc[pd.IndexSlice[:, largest_Nbar, :], :].reset_index(
-#     level="Nbars", drop=True
-# )
-
-# means = runs_largest.groupby(["coefficients"], sort=False).mean()
-# means = means.rename(columns={"Estimates": "mean"})
-
-# means.loc["Sample size", "mean"] = largest_Nbar
-# means.loc["MC iterations", "mean"] = mc_options['mc_iter']
-
-
-# stds = runs_largest.groupby(["coefficients"], sort=False).std()
-# stds = stds.rename(columns={"Estimates": "std"})
-# p_025 = runs_largest.groupby(["coefficients"], sort=False).quantile(0.025)
-# p_025 = p_025.rename(columns={"Estimates": "p2.5"})
-# p_975 = runs_largest.groupby(["coefficients"], sort=False).quantile(0.975)
-# p_975 = p_975.rename(columns={"Estimates": "p97.5"})
-# stats = pd.concat([true_params, means, stds, p_025, p_975], axis=1)
-
-runs.round(4).to_latex(out_dir + "mc_table.tex", escape=False)
-runs.round(4).to_markdown(out_dir + "mc_table.md")
-
+stats.round(4).to_latex(out_dir + "mc_table.tex", escape=False)
+stats.round(4).to_markdown(out_dir + "mc_table.md")
 
 # plotting errors
-
 est_post = pd.concat(est_posts, axis=0)
+breakpoint()
 plt.figure(figsize=(25.6,14.4))
-plt.scatter(est_post['ccps'], est_post['residuals'], marker='.', label='res', color='blue', alpha=0.5)
+for eps in epss:
+    plt.scatter(est_post.loc[pd.IndexSlice[:,:, :, eps],'ccps'], est_post.loc[pd.IndexSlice[:,:, :, eps],'residuals'], marker='.', label=eps, alpha=0.5)
 plt.xlabel("CCPs")
 plt.ylabel("Residuals")
 plt.legend()
 plt.savefig(out_dir + "errors.png", dpi=100, bbox_inches="tight")
 
-
 plt.figure(figsize=(25.6,14.4))
-plt.scatter(est_post['counts'], est_post['residuals'], marker='.', label='res', color='blue', alpha=0.5)
-plt.xlabel("counts")
-plt.ylabel("Residuals")
+for eps in epss:
+    plt.scatter(est_post.loc[pd.IndexSlice[:,:, :, eps],'Y'], est_post.loc[pd.IndexSlice[:,:, :, eps],'preds'], marker='.', label=eps, alpha=0.5)
+plt.plot([est_post['Y'].min(), est_post['Y'].max()], [est_post['Y'].min(), est_post['Y'].max()], color='red', linestyle='--')
+plt.xlabel("Y")
+plt.ylabel("predicted Y")
 plt.legend()
-plt.savefig(out_dir + "errors_on_counts.png", dpi=100, bbox_inches="tight")
+plt.savefig(out_dir + "preds_vs_Y.png", dpi=100, bbox_inches="tight")
+
+# plt.figure(figsize=(25.6,14.4))
+# plt.scatter(est_post['counts'], est_post['residuals'], marker='.', label='res', color='blue', alpha=0.5)
+# plt.xlabel("counts")
+# plt.ylabel("Residuals")
+# plt.legend()
+# plt.savefig(out_dir + "errors_on_counts.png", dpi=100, bbox_inches="tight")
 
 
 # Plotting them in a density plot
