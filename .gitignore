@@ -46,3 +46,5 @@ analysis/estimation/data/*pkl
 model_solution*.pkl
 **.egg-info/
 sim_data/data.pkl
+sim_data/data.pkl
+.gitignore
