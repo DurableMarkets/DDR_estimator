@@ -12,16 +12,21 @@ def owls_regression_mc(X, ccps, counts, model_specification):
     """
     # Index for zero share rows
 
-    X = X[model_specification]
+    I=(counts != 0).values
+
+    ccps = ccps.loc[I] # removes all 0 counts
+    counts = counts.loc[I] # removes all 0 counts
+
+    X = X[model_specification].loc[I]
+    
     #X = X.values.astype(float)
 
     logY = np.log(ccps.values.flatten())
 
-    B = estimate_owls(logY, X, ccps, counts)
-    breakpoint()
+    B, est_post = estimate_owls(logY, X, ccps, counts)
     est = pd.DataFrame(B, index=[model_specification], columns=["Coefficient"])
 
-    return est
+    return est, est_post
 
 
 def estimate_owls(Y, X, ccps, counts):
@@ -59,7 +64,6 @@ def estimate_owls(Y, X, ccps, counts):
               },
               index=X.index
     )
-
     return g0, est_post
     
 
@@ -79,7 +83,8 @@ def calculate_weights(ccps, counts):
         P = ccps.loc[idx[consumer_type, state, :]].values
         K = P.shape[0]
         N_is = N.loc[N.index[i]]
-        A =np.sqrt(N_is) * np.identity(K)
+        #breakpoint()
+        A = np.sqrt(N_is)*np.diag(P - P**2)
         weight_blocks.append(A)
 
     return weight_blocks

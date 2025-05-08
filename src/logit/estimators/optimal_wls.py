@@ -19,14 +19,13 @@ def owls_regression_mc(X, ccps, counts, model_specification):
     counts = counts.loc[I] # removes all 0 counts
 
     X = X[model_specification].loc[I]
-
+    
     #X = X.values.astype(float)
 
     logY = np.log(ccps.values.flatten())
 
     B, est_post = estimate_owls(logY, X, ccps, counts)
     est = pd.DataFrame(B, index=[model_specification], columns=["Coefficient"])
-
     return est, est_post
 
 
@@ -122,24 +121,24 @@ def calculate_weights(ccps, counts):
         N_is = N.loc[N.index[i]]
 
         # A is the pseudo-inverse of B 
-        A= (
-           np.diag(P)
-           @
-           (np.identity(K) - 1/K * np.ones((K,K)))
-           @ np.diag(1/P) 
-           @ (np.identity(K) - 1/K * np.ones((K,K))) 
-           @ np.diag(P)
-        )
-        Pcol=np.c_[P]
-        ocol = np.c_[np.ones(K)]
-        test = 1/K**2 * Pcol @ ocol.T @ np.diag(1/P) @ ocol @ Pcol.T
-        A = np.diag(P) - 1/K * Pcol @ Pcol.T 
+        # A= (
+        #    np.diag(P)
+        #    @
+        #    (np.identity(K) - 1/K * np.ones((K,K)))
+        #    @ np.diag(1/P) 
+        #    @ (np.identity(K) - 1/K * np.ones((K,K))) 
+        #    @ np.diag(P)
+        # )
+        # Pcol=np.c_[P]
+        # ocol = np.c_[np.ones(K)]
+        # test = 1/K**2 * Pcol @ ocol.T @ np.diag(1/P) @ ocol @ Pcol.T
+        # A = np.diag(P) - 1/K * Pcol @ Pcol.T 
 
-        A= (
-           (np.identity(K)/K - np.ones((K,K)))
-           @ np.diag(P) 
-           @ (np.identity(K)/K - np.ones((K,K))) 
-        )
+        # A= (
+        #    (np.identity(K)/K - np.ones((K,K)))
+        #    @ np.diag(P) 
+        #    @ (np.identity(K)/K - np.ones((K,K))) 
+        # )
 
         
         # similar to diag(P) 
@@ -147,42 +146,42 @@ def calculate_weights(ccps, counts):
 
 
         # THIS one is not correct but does give very pretty errors. 
-        A = np.diag(P) - 1/K * np.diag(P) @ np.ones((K,K)) - 1/K * np.ones((K,K)) @ np.diag(P) + 2/(K**2) * np.diag(P) @ np.ones((K,K))        
+        # A = np.diag(P) - 1/K * np.diag(P) @ np.ones((K,K)) - 1/K * np.ones((K,K)) @ np.diag(P) + 2/(K**2) * np.diag(P) @ np.ones((K,K))        
         #A = A.T (and not symmetric)
         
         # pesendorfer and Schmidt-Dengler (2008) has this one
         # IT works quite well actually
-        A = np.diag(P) + np.c_[P] @ np.c_[P].T/ P[-1] # P[-1] is the purge decision
+        # A = np.diag(P) + np.c_[P] @ np.c_[P].T/ P[-1] # P[-1] is the purge decision
         # this one also works nicely - But appararently it is not a generalized inverse... Really strange
-        A = np.diag(P) + np.c_[P] @ np.c_[P].T # just playing with this one to see if it is better
+        # A = np.diag(P) + np.c_[P] @ np.c_[P].T # just playing with this one to see if it is better
         # This one is a pseudo inverse but it gives us crap....
         # I know why... the xwx matrix becomes singular when we choose this weight matrix.
-        A=(np.diag(P) - np.c_[P] @ np.c_[P].T) 
+        # A=(np.diag(P) - np.c_[P] @ np.c_[P].T) 
         # This one is also works fine but it is still not the generalized inverse. 
         #A=(np.diag(P) - np.c_[P] @ np.c_[P].T/P[-1]) # P[-1] is the purge decision
 
 
         # Playing around: 
         # A is the pseudo-inverse of B 
-        A= (
-           np.diag(P)
-           @
-           (np.identity(K) - 1/K * np.ones((K,K)))
-           @ np.diag(1/P) 
-           @ (np.identity(K) - 1/K * np.ones((K,K))) 
-           @ np.diag(P)
-        )
-        A=(np.diag(P) - np.c_[P] @ np.c_[P].T) 
+        # A= (
+        #    np.diag(P)
+        #    @
+        #    (np.identity(K) - 1/K * np.ones((K,K)))
+        #    @ np.diag(1/P) 
+        #    @ (np.identity(K) - 1/K * np.ones((K,K))) 
+        #    @ np.diag(P)
+        # )
+        # A=(np.diag(P) - np.c_[P] @ np.c_[P].T) 
         #A = np.diag(1/P) - np.ones((K,K))
         #A = np.diag(1/P) + np.ones((K,K))
         #A = np.diag(P) - np.c_[P] @ np.c_[P].T/ P[-1] # P[-1] is the purge decision
 
         #A=(np.diag(P) - 1/K *np.c_[P] @ np.c_[P].T) 
-        A = (
-            (np.identity(K) + 1/np.sum(P**2) *  np.c_[P] @ np.c_[P].T )
-            @ np.diag(P)
-            @ (np.identity(K) + 1/np.sum(P**2) *  np.c_[P] @ np.c_[P].T )
-        )
+        # A = (
+        #     (np.identity(K) + 1/np.sum(P**2) *  np.c_[P] @ np.c_[P].T )
+        #     @ np.diag(P)
+        #     @ (np.identity(K) + 1/np.sum(P**2) *  np.c_[P] @ np.c_[P].T )
+        # )
              #np.diag(P) - 1/K * np.c_[P] @ np.c_[P].T # This one is not a generalized inverse but it works well.
         #A = np.diag(P**2) # This one because it would equivalent to minimizing the squared conjugate social surplus. 
         # A =(    
@@ -218,11 +217,19 @@ def calculate_weights(ccps, counts):
         # @(np.identity(K) - np.c_[P] @ np.c_[P].T) 
         # )
 
-        A = (
+        A = ( 
         (np.identity(K) -  1/np.sum(P**2) *np.c_[P] @ np.c_[P].T) 
         @ np.diag(P)
         @(np.identity(K) - 1/np.sum(P**2) *np.c_[P] @ np.c_[P].T) 
         )
+
+        #A = np.diag(P) - np.c_[P] @ np.c_[P].T
+        #A[-1,-1] = 1
+
+        #breakpoint()
+        #B = np.diag(1/P) - np.ones((K,K))
+
+        #ABA = A @ B @ A 
 
 
         # #if check_if_reflexive_generalized_inverse(A, np.diag(1/P) - np.ones((K,K))) == False: 

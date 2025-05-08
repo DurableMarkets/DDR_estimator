@@ -5,7 +5,7 @@ import logit.monte_carlo_tools.misc_tools as misc_tools
 import logit.monte_carlo_tools.monte_carlo_tools as monte_carlo_tools
 import logit.ddr_tools.dependent_vars as dependent_vars
 import logit.prices.prices as prices
-import logit.estimators.optimal_wls as optimal_wls
+import logit.estimators.schmidt_dengler as schmidt_dengler
 import jax.numpy as jnp
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -29,7 +29,7 @@ jpe_model = eqb.load_models("jpe_model")
 
 ### MODEL SPECIFICATION ###
 sim_options, mc_options, params_update, options_update, specification, out_dir=get_model_specs(
-    lambda model_name: f"./output/simulations/{model_name}/owls/"
+    lambda model_name: f"./output/simulations/{model_name}/schmidt_dengler/"
     )
 
 # update
@@ -76,7 +76,6 @@ X_indep, model_specification = regressors.create_data_independent_regressors(
     options=options,
     specification=specification,
 )
-breakpoint()
 # X_indep.loc[pd.IndexSlice[0, :, :, :, :], "consumer_dummy_0"] = 1
 # X_indep.loc[pd.IndexSlice[0, 51, :, :, :], "consumer_dummy_1"] = 0
 # X_indep.loc[pd.IndexSlice[1, :, :, :, :], "consumer_dummy_1"] = 1
@@ -143,13 +142,12 @@ for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
             options=options,
             specification=specification,
         )
-        breakpoint()
 
 
         # combine independent and dependent regressors
         X = dependent_vars.combine_regressors(X_indep, X_dep, model_specification)
         # Estimate 
-        est, est_post = optimal_wls.owls_regression_mc(
+        est, est_post = schmidt_dengler.owls_regression_mc(
             ccps=cfps, 
             counts=counts, 
             X=X, 
@@ -162,7 +160,6 @@ for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
         est = est.set_index(["Nbar", "mc_iter"], append=True)
         
         ests.append(est)
-        #breakpoint()
         est_post["mc_iter"] = i
         est_post["Nbar"] = int(Nbar)
         est_post = est_post.reset_index().set_index(

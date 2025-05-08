@@ -5,7 +5,7 @@ import pandas as pd
 import jax
 jax.config.update("jax_enable_x64", True)
 
-def ridge_regression_mc(X, ccps, counts, model_specification, eps):
+def owls_regression_mc(X, ccps, counts, model_specification):
     """This function estimates the parameters of the DDR regression.
 
     ccp can be any ccp estimator as long as the shape is consistent with
@@ -13,31 +13,36 @@ def ridge_regression_mc(X, ccps, counts, model_specification, eps):
 
     """
     # Index for zero share rows
+    I=(counts != 0).values
 
-    X = X[model_specification]
+    ccps = ccps.loc[I] # removes all 0 counts
+    counts = counts.loc[I] # removes all 0 counts
+
+    X = X[model_specification].loc[I]
+    
     #X = X.values.astype(float)
 
     logY = np.log(ccps.values.flatten())
 
-    B, est_post = estimate_owls(logY, X, ccps, counts, eps)
+    B, est_post = estimate_owls(logY, X, ccps, counts)
     est = pd.DataFrame(B, index=[model_specification], columns=["Coefficient"])
-
     return est, est_post
 
 
-def estimate_owls(Y, X, ccps, counts, eps):
+def estimate_owls(Y, X, ccps, counts):
     """This function estimates the parameters of the DDR regression using the optimal wls weight matrix. 
 
     """
     # Index for zero share rows
     Y = jnp.nan_to_num(Y, nan=0.0)
     X = X.astype(float)
+
     #test_of_covariance_matrices(X, ccps, counts)
 
     # calc the weights
-    weight_blocks = calculate_weights(ccps, counts, eps)
+    weight_blocks = calculate_weights(ccps, counts)
     X_indices = X.index.droplevel([level for level in X.index.names if level not in ["consumer_type", "state"]]).unique()
-    
+
     #xwx_=np.zeros((114,114))
     # xwx_test = [X.loc[X_indices[i][0],:,X_indices[i][1], :, :].values.T 
     #     @ weight_blocks[i] 
@@ -52,23 +57,33 @@ def estimate_owls(Y, X, ccps, counts, eps):
 
     # for i in range(len(xwx_test)):
     #     xwx_+=xwx_test[i]
-    K = weight_blocks[0].shape[0]
+
     xw = jnp.concatenate(
         [X.loc[X_indices.get_level_values('consumer_type')[i],:,X_indices.get_level_values('state')[i], :, :].values.T 
         @ weight_blocks[i] for i in range(len(weight_blocks))]
     ,axis=1)
-    #    breakpoint()
 
-    xwx = xw @ X.values 
+    xwx = xw @ X.values
     xwy = xw @ Y
+    
+    if np.allclose(np.linalg.det(xwx),0.0):
+        print("xwx is singular")
+
+    # This is for testing purposes only
+    x_uwx_u = xwx[0:12,0:12]
+    x_evwx_ev = xwx[12:, 12:]
+    x_uwx_ev = xwx[0:12, 12:]
+    x_evwx_u = xwx[12:, 0:12]
+
+    # singularity checks
+    np.allclose(x_uwx_ev.T, x_evwx_u) # symmetry check
+    #np.linalg.det(x_uwx_u)
+    #np.linalg.det(x_evwx_ev)
+    #breakpoint()    
 
     # WLS regression
     g0 = np.linalg.solve(xwx, xwy)
     #g0= np.linalg.lstsq(xwx, xwy)[0]
-    
-    if np.isclose(np.linalg.eig(xwx)[0].min(), 0):
-        breakpoint()
-
     #breakpoint()
     preds = X.values @ g0
     residuals = Y - preds
@@ -77,13 +92,17 @@ def estimate_owls(Y, X, ccps, counts, eps):
               'residuals': 
               residuals, 
               'Y': Y,
-              'ccps': ccps.values}, index=X.index)
+              'ccps': ccps.values, 
+              'counts': counts.values,
+              },
+              index=X.index
+    )
 
     return g0, est_post
     
 
 
-def calculate_weights(ccps, counts, eps):
+def calculate_weights(ccps, counts):
     
 
     # initialize 
@@ -101,45 +120,20 @@ def calculate_weights(ccps, counts, eps):
         K = P.shape[0]
         N_is = N.loc[N.index[i]]
 
-        A = (
-            (np.identity(K) + eps/np.sum(P**2) *  np.c_[P] @ np.c_[P].T )
-            @ np.diag(P)
-            @ (np.identity(K) + eps/np.sum(P**2) *  np.c_[P] @ np.c_[P].T )
-        )
-
-
+        # schmidt_dengler weights 
+        A = np.diag(P) + np.c_[P] @ np.c_[P].T/ P[-1] # P[-1] is the purge decision
         weight_blocks.append(A)
 
     return weight_blocks
 
-
-def create_regularization(ccps, counts, eps = 1e-8):
-    
-    # initialize 
-    N = counts.groupby(
-        ["consumer_type", "state"]
-    ).sum()
-    N_all = counts.sum()
-    if counts.min() == 0:
-        raise ValueError("Counts cannot be zero.")
-
-    weight_blocks = []
-    for i in range(N.shape[0]):
-        consumer_type, state=N.index[i]
-        P = ccps.loc[idx[consumer_type, state, :]].values
-        K = P.shape[0]
-        N_is = N.loc[N.index[i]]
-
-        # A is the pseudo-inverse of B 
-        A= np.identity(K)
-
-        weight_blocks.append(A)
-
-    weight_blocks= eps * jnp.concatenate(weight_blocks,axis=0)
-
-
-    return weight_blocks
-
+def check_if_reflexive_generalized_inverse(A,B):
+    ABA=A @ B @ A 
+    BAB=B @ A @ B
+    return np.all([np.allclose(A, ABA), np.allclose(BAB, B)])
+def check_if_symmetric(A,B):
+    AB=A @ B 
+    BA=B @ A 
+    return np.all([np.allclose(AB,AB.T), np.allclose( BA, BA.T)])
 
 def playground_test_of_pseudo_inverses(ccps, counts):
     # calc weights
@@ -180,19 +174,30 @@ def playground_test_of_pseudo_inverses(ccps, counts):
     )
     A = np.diag(P) - np.c_[P] @ np.c_[P].T/ P[-1] # P[-1] is the purge decision
     A = np.diag(P) - np.c_[P] @ np.c_[P].T # P[-1] is the purge decision
-    B = np.diag(1/P) + np.ones((K,K))
+    B = np.diag(1/P)
+    
+    B = np.diag(1/P) - np.ones((K,K))
+    A =(
+        np.diag(P)
+        - 1/np.sum(P**2) * np.c_[P] @ np.c_[P].T @ np.diag(P)  
+        - 1/np.sum(P**2) * np.diag(P) @ np.c_[P] @ np.c_[P].T  
+        - np.sum(P**3)/(np.sum(P**2)**2) * np.c_[P] @ np.c_[P].T 
+    )
+
+    A =(
+    (np.identity(K) - 1/np.sum(P**2) * np.c_[P] @ np.c_[P].T) 
+    @ np.diag(P)
+    @(np.identity(K) - 1/np.sum(P**2) * np.c_[P] @ np.c_[P].T) 
+    )
+
+
     ABA=A @ B @ A 
-    breakpoint()
-    # Symmetry check
-    np.allclose(A.T, A)
+    BAB=B @ A @ B
 
-    np.allclose(A, ABA)
+    print(np.allclose(A, ABA))
+    print(np.allclose(BAB, B))
 
-    BAB=B @ A @ B 
-
-    np.allclose(B, BAB)
-
-    return weights
+    return None
 
 
 
@@ -202,7 +207,6 @@ def test_of_covariance_matrices(X, ccps, counts):
 
     # diag(P)
     X_indices = X.index.droplevel([level for level in X.index.names if level not in ["consumer_type", "state"]]).unique()
-    breakpoint()
 
     weights=calculate_weights(ccps, counts)
 
@@ -239,10 +243,10 @@ def test_of_covariance_matrices(X, ccps, counts):
     cand = np.linalg.inv(xdiagpx) @ (xdiagpx - xppx) @ np.linalg.inv(xdiagpx)
     B_sword = np.linalg.pinv(B)
     np.allclose(B_sword, xdiagpx)
-    breakpoint()
+
     ABA = A @ B @ A
     BAB = B @ A @ B
-    breakpoint()
+
     np.allclose(A, ABA)
     np.allclose(B, BAB)
 

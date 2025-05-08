@@ -20,9 +20,6 @@ def owls_regression_mc(X, ccps, counts, model_specification):
 
     X = X[model_specification].loc[I]
 
-
-    X = X[model_specification]
-
     logY = np.log(ccps.values.flatten())
 
     B, est_post = estimate_owls(logY, X, ccps, counts)

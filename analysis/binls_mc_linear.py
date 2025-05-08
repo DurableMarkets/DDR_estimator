@@ -13,86 +13,26 @@ import jax
 from tqdm import tqdm
 import numpy as np
 import eqb
+from data_setups.options import get_model_specs
 
 from set_path import get_paths
+jax.config.update("jax_enable_x64", True)
+pd.set_option("display.max_rows", 705)
+
 
 path_dict = get_paths()
+# load model options 
 
 # Load jpe model
 jpe_model = eqb.load_models("jpe_model")
 
-jax.config.update("jax_enable_x64", True)
-pd.set_option("display.max_rows", 705)
-
-# set output directory
-out_dir = "./output/simulations/binls/"
-
-# Set options
-
-# Set number of consumers and car types
-num_consumers = 2
-num_car_types = 2
 
 ### MODEL SPECIFICATION ###
+sim_options, mc_options, params_update, options_update, specification, out_dir=get_model_specs(
+    lambda model_name: f"./output/simulations/{model_name}/binls/"
+    )
 
-specification = {
-    "mum": (num_consumers, 1),
-    "buying": (num_consumers, 1),
-    #"buying": None,
-    "scrap_correction": (num_consumers, 1),
-    "u_0": (num_consumers, num_car_types),
-    "u_a": (num_consumers, 1),
-    "u_a_sq": None,
-    "u_a_even": None,
-}
-
-# chunk_size and n_periods should be tuned to jax's memory capacity and mc_iter should control the number of observations.
-chunk_size = 500_000
-mc_iter = 100
-N_mc = 1_000_000 #5_000_000 
-sample_iter = N_mc * mc_iter // chunk_size
-
-# Estimation_size controls the sample size used in the estimation
-estimation_size = N_mc  # 1000000
-assert (
-    estimation_size % chunk_size == 0
-), "estimation_size should be a multiple of chunk_size"
-assert N_mc % chunk_size == 0, "N_mc should be a multiple of chunk_size"
-assert (
-    estimation_size <= chunk_size * sample_iter
-), "estimation_size should be smaller or equal to chunk_size * mc_iter"
-
-sim_options = {
-    "n_agents": chunk_size * sample_iter,  # 226675,
-    "n_periods": 1,
-    "seed": 123,
-    "chunk_size": chunk_size,
-    "estimation_size": estimation_size,
-    "use_count_data": True,
-}
-
-# stores different sample sizes for multiple monte carlo runs
-#Nbars = jnp.arange(0, N_mc,  10**6) +  10**6
-Nbars = jnp.array([N_mc])
-
-# update options and params with number of consumers and car types
-params_update = {
-    "p_fuel": [0.0],
-    "acc_0": [-100.0],
-    "mum": [0.5, 0.5],
-    "psych_transcost": [4.0, 2.0],
-    'u_0': np.array([[12.0,12.0],[12.0,12.0]]),
-    #'u_a': np.array([-0.5,-0.5]),
-    #'sigma_sell_scrapp': 0.0000000001,
-    #'pscrap': [1.0,1.0],
-}
-
-options_update = {
-    "n_consumer_types": num_consumers, # Redundant
-    "n_car_types": num_car_types,
-    "max_age_of_car_types": [25],
-    "tw": [0.5, 0.5],
-}
+# update
 params, options = jpe_model["update_params_and_options"](
     params=params_update, options=options_update
 )
@@ -106,8 +46,9 @@ params, options = jpe_model["update_params_and_options"](
     fsim_options,
     model_struct_arrays,
 ) = simulate.load_or_simulate_data(params, options, jpe_model, sim_options, path_dict["sim_data"])
-
-
+plt.plot(df.loc[pd.IndexSlice[0,0,:,:]].groupby(['state']).sum())
+plt.show()
+breakpoint()
 for key in model_struct_arrays.keys():
     model_struct_arrays[key] = np.array(model_struct_arrays[key])
 
@@ -136,8 +77,17 @@ X_indep, model_specification = regressors.create_data_independent_regressors(
     options=options,
     specification=specification,
 )
+# X_indep.loc[pd.IndexSlice[0, :, :, :, :], "consumer_dummy_0"] = 1
+# X_indep.loc[pd.IndexSlice[0, 51, :, :, :], "consumer_dummy_1"] = 0
+# X_indep.loc[pd.IndexSlice[1, :, :, :, :], "consumer_dummy_1"] = 1
+# X_indep.loc[pd.IndexSlice[1, 51, :, :, :], "consumer_dummy_0"] = 0
+
+# model_specification.extend(["consumer_dummy_0", "consumer_dummy_1"])
+# X_indep.loc[pd.IndexSlice[:, :, :, :, :], "consumer_dummy_0"] = 1
+# model_specification.append("consumer_dummy_0")
 
 # mc simulation
+Nbars = mc_options['Nbars'] # if instead np.arange[0, est_size, x] we can do a sequentially increasing set of mc runs
 ests, est_posts = [], []
 df_idx = df.index
 #TODO: Strange that the indices are named differently across the data df and the main_df...
@@ -155,7 +105,7 @@ for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
     # aggregate over new index
     df_Nbar = df.groupby(["est_i", "consumer_type", "state", "decision"]).sum()
 
-    chunks = df_Nbar.index.get_level_values("est_i").unique()[:mc_iter]
+    chunks = df_Nbar.index.get_level_values("est_i").unique()[:mc_options['mc_iter']]
     # chunks = df.index.get_level_values("est_i").unique()[:mc_iter]
     # loops over monte carlo iterations
     for i in tqdm(chunks, desc="Current MC progress", leave=False):
@@ -171,9 +121,8 @@ for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
 
         cfps, counts = dependent_vars.calculate_cfps_from_df(sim_df)
         #cfps= dependent_vars.true_ccps(main_df, model_solution, options)
-
         scrap_probabilities = dependent_vars.calculate_scrap_probabilities(sim_df)
-        #scrap_probabilities = model_solution["ccp_scrap_tau"]
+        scrap_probabilities = model_solution["ccp_scrap_tau"]
 
 
         # Estimate accident parameters
@@ -194,9 +143,10 @@ for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
             options=options,
             specification=specification,
         )
+
+
         # combine independent and dependent regressors
         X = dependent_vars.combine_regressors(X_indep, X_dep, model_specification)
-
         # Estimate 
         est, est_post = binls.owls_regression_mc(
             ccps=cfps, 
@@ -209,7 +159,7 @@ for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
         est["mc_iter"] = i
         est["Nbar"] = int(Nbar)
         est = est.set_index(["Nbar", "mc_iter"], append=True)
-
+        
         ests.append(est)
 
         est_post["mc_iter"] = i
@@ -247,7 +197,7 @@ for i, tuple in enumerate(tuples):
 tuples = list(zip(["MC iterations"] * len(list_of_Nbars), list_of_Nbars))
 idx = pd.IndexSlice
 for i, tuple in enumerate(tuples):
-    means.loc[idx[tuple], "mean"] = mc_iter
+    means.loc[idx[tuple], "mean"] = mc_options['mc_iter']
 
 # long table
 stds = runs.groupby(["coefficients", "Nbars"], sort=False).std()
@@ -301,7 +251,7 @@ means = runs_largest.groupby(["coefficients"], sort=False).mean()
 means = means.rename(columns={"Estimates": "mean"})
 
 means.loc["Sample size", "mean"] = largest_Nbar
-means.loc["MC iterations", "mean"] = mc_iter
+means.loc["MC iterations", "mean"] = mc_options['mc_iter']
 
 
 stds = runs_largest.groupby(["coefficients"], sort=False).std()
@@ -317,58 +267,31 @@ stats.round(4).to_markdown(out_dir + "mc_table.md")
 
 
 # plotting errors
+
 est_post = pd.concat(est_posts, axis=0)
 plt.figure(figsize=(25.6,14.4))
-plt.scatter(est_post['ccps'], est_post['residuals'], marker='.')
-plt.title('binls residuals')
+for i in est_post.index.get_level_values('consumer_type').unique():
+    plt.scatter(est_post.loc[pd.IndexSlice[:, :, :, i, :, :, :, :], 'ccps'], est_post.loc[pd.IndexSlice[:, :, :, i, :, :, :, :], 'residuals'], marker='.', label=f'c_type_{i}', alpha=0.5)
+#plt.scatter(est_post['ccps'], est_post['residuals'], marker='.', label='c_type_{}', color='blue', alpha=0.5)
 plt.xlabel("CCPs")
 plt.ylabel("Residuals")
+plt.legend()
 plt.savefig(out_dir + "errors.png", dpi=100, bbox_inches="tight")
+
+
+plt.figure(figsize=(25.6,14.4))
+plt.scatter(est_post['counts'], est_post['residuals'], marker='.', label='res', color='blue', alpha=0.5)
+plt.xlabel("counts")
+plt.ylabel("Residuals")
+plt.legend()
+plt.savefig(out_dir + "errors_on_counts.png", dpi=100, bbox_inches="tight")
+
 
 # Plotting them in a density plot
 plt.figure(figsize=(25.6,14.4))
 plt.hist(est_post['residuals'], bins=100, density=True, alpha=0.5, color='blue', label='res')
 #plt.hist(np.exp(est_post['residuals']), bins=100, density=True, alpha=0.5, color='red', label='exp(res) - 1 ')
-plt.title('binls residuals')
+plt.title('optimal WLS residuals')
 plt.xlabel("Residuals") 
 plt.legend()
 plt.savefig(out_dir + "errors_density.png", dpi=100, bbox_inches="tight")
-
-
-
-
-#
-#
-# # Build a violin plot of the estimates for each parameter.
-# ## Skipping this.
-# #import seaborn as sns
-# #import matplotlib.patches as mpatches
-#
-# #plt.figure(figsize=(20, 12))
-#
-# #diffs = runs["Estimates"] - true_params["true values"]
-#
-# #colors = sns.color_palette("Set1", n_colors=len(Nbars))
-# #patches = []
-# #for i, Nbar in enumerate(Nbars):
-# #    diffs_n = diffs.loc[pd.IndexSlice[:, int(Nbar), :]]
-# #    sns.boxplot(
-# #        x=diffs_n.values,
-# #        y=diffs_n.index.get_level_values("coefficients"),
-# #        orient="h",
-# #        boxprops=dict(alpha=0.3, color=colors[i]),
-# #        showfliers=False,
-# #        fill=False,
-# #        legend=True,
-# #    )
-# #    patches.append(
-# #        mpatches.Patch(
-# #            color=colors[i], label="{:0.1e}".format(Nbar.astype(int)) + " Obs."
-# #        )
-# #    )
-# #
-# #plt.legend(handles=patches)
-#
-# #plt.savefig(out_dir + "violin_plot.png", dpi=300, bbox_inches="tight")
-#
-# # plt.show()
