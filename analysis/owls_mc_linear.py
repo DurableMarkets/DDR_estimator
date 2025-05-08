@@ -143,7 +143,6 @@ for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
             options=options,
             specification=specification,
         )
-        breakpoint()
 
 
         # combine independent and dependent regressors

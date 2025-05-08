@@ -66,22 +66,22 @@ def estimate_owls(Y, X, ccps, counts):
     xwx = xw @ X.values
     xwy = xw @ Y
     
-    if np.allclose(np.linalg.det(xwx),0.0):
-        print("xwx is singular")
+    # if np.allclose(np.linalg.det(xwx),0.0):
+    #     print("xwx is singular")
 
     # This is for testing purposes only
-    x_uwx_u = xwx[0:12,0:12]
-    x_evwx_ev = xwx[12:, 12:]
-    x_uwx_ev = xwx[0:12, 12:]
-    x_evwx_u = xwx[12:, 0:12]
+    # x_uwx_u = xwx[0:12,0:12]
+    # x_evwx_ev = xwx[12:, 12:]
+    # x_uwx_ev = xwx[0:12, 12:]
+    # x_evwx_u = xwx[12:, 0:12]
 
-    # singularity checks
-    np.allclose(x_uwx_ev.T, x_evwx_u) # symmetry check
-    #np.linalg.det(x_uwx_u)
-    #np.linalg.det(x_evwx_ev)
-    #breakpoint()    
+    # # singularity checks
+    # np.allclose(x_uwx_ev.T, x_evwx_u) # symmetry check
+    # #np.linalg.det(x_uwx_u)
+    # #np.linalg.det(x_evwx_ev)
+    # #breakpoint()    
 
-    # WLS regression
+    # # WLS regression
     g0 = np.linalg.solve(xwx, xwy)
     #g0= np.linalg.lstsq(xwx, xwy)[0]
     #breakpoint()
@@ -227,7 +227,12 @@ def calculate_weights(ccps, counts):
         #A[-1,-1] = 1
 
         #breakpoint()
-        #B = np.diag(1/P) - np.ones((K,K))
+        A = ((np.identity(K) - 1/K * np.ones((K,K)))
+            @ np.diag(1/P) 
+            @ (np.identity(K) - 1/K * np.ones((K,K)))
+        )
+
+
 
         #ABA = A @ B @ A 
 
