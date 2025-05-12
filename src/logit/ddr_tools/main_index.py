@@ -33,7 +33,14 @@ def create_main_df(model_struct_arrays, params, options):
         main_df.index.get_level_values("decision").values]
     
     # Very wierd behaviour that must be a bug. dict within an array...
-    post_decision_state_dict=model_struct_arrays['post_decision_states_dict'].flatten()[0]
+    # This only occurs in the simulation code. For some reason not in the 
+    #TODO: FIX THIS (see GitHub Issue #12)
+    breakpoint()
+    try:
+        post_decision_state_dict=model_struct_arrays['post_decision_states_dict'].flatten()[0]
+    except:
+        post_decision_state_dict=model_struct_arrays['post_decision_states_dict']
+
 
     main_df['car_type_post_decision'] =post_decision_state_dict['car_type_post_decision'][
         main_df['post_decision_state_idx'].values]
