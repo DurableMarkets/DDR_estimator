@@ -27,6 +27,9 @@ analysis/logit/*.txt
 analysis/pddr_on_real_data/data/*
 analysis/logit/monte_carlo/sim_data/*
 *.csv
+!analysis/data/8x4_eqb/*.csv
+!analysis/data/model_inputs/*/*.csv
+
 intermediate_params.pkl
 
 
