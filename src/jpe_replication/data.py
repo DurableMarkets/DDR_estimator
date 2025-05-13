@@ -1,10 +1,10 @@
 import os
-breakpoint()
 import numpy as np
 import pandas as pd
 
 
 def read_file(fpath: str):
+    breakpoint()
     assert os.path.isfile(fpath), f"File {os.path.basename(fpath)} does not exist"
     counts = pd.read_excel(fpath)
     return counts

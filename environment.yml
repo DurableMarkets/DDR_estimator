@@ -20,6 +20,7 @@ dependencies:
   - pre-commit
   - toml
   - tqdm
+  - openpyxl # pandas dependency for reading excel files.
 
   # Plotting
   - matplotlib

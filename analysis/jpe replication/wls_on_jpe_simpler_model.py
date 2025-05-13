@@ -5,110 +5,105 @@ from collections import namedtuple
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
-from IPython.display import display
-from IPython.display import Latex
-from IPython.display import Markdown
 from jax import config
 from scipy import io as io
-
-sys.path.insert(0, "../../src/")
-sys.path.insert(0, "../logit/")
-sys.path.insert(0, "../logit/DDR_estimation/")
-sys.path.insert(0, "../logit/monte_carlo/")
-sys.path.insert(0, "./data/")
-
-import pdb
-from jpe_model.update_specs import set_options
-from jpe_model.update_specs import set_params
-from jpe_model.state_decision_space import setup_state_space, setup_decision_space
-
-import monte_carlo.mctools as mc
-from eqb_model.process_model_struct import create_model_struct_arrays
-from jpe_model.update_specs import update_params_and_options
+import eqb
 import jax.numpy as jnp
+import jax
 import pandas as pd
 import matplotlib.pyplot as plt
-import utils
-import monte_carlo.mctools as mc
-import model_interface as mi
-import data
+import logit.ddr_tools.main_index as main_index
 
-from pdr_estimation import estimate_pdr, estimate_pdr_experimental
+
 import pickle
+from data_setups.options import get_model_specs
+from set_path import get_paths
 
-# setting up the output directory for figures and tables
-out_dir = './outputs/wls_on_jpe_simpler_model/'
+from eqb.equilibrium import (
+    create_model_struct_arrays,
+    equilibrium_solver,
+)
+import jpe_replication.data as data
+
+jax.config.update("jax_enable_x64", True)
+pd.set_option("display.max_rows", 705)
+
+path_dict = get_paths()
+
+# Load jpe model
+jpe_model = eqb.load_models("jpe_model")
 
 
-# enable 64 bit precision
-config.update("jax_enable_x64", True)
+### MODEL SPECIFICATION ###
+out_folder = 'wls_on_jpe'
+sim_options, mc_options, params_update, options_update, specification, out_dir=get_model_specs(
+    lambda folder: f'./output/replication/{out_folder}')
 
+
+
+# update
+options_update["n_consumer_types"] = 8
+options_update["max_age_of_car_types"] = np.array([22] * 4)
+options_update["n_car_types"] = 4  
+
+params, options = jpe_model["update_params_and_options"](
+    params=params_update, options=options_update
+)
 
 # Use linear_specification = True for linear specification
 linear_specification = True
 
-in_path = "./data/8x4_eqb"
+in_path = "./analysis/data/8x4_eqb"
 file = in_path + "/arrays_prices_options.pickle"
 
-with open(file, "rb") as handle:
-    obj = pickle.load(handle)
-(
-    state_space,
-    map_state_to_index,
-    price_index,
-    used_car_states,
-    prices,
-    model_struct_arrays,
-    options,
-) = obj
-
-
-# options should match that i'm estimating every consumer type independently.
-# params, options=update_params_and_options(dict() , dict())
-
-options = dict()
-options["num_consumer_types"] = 8
-options["max_age_of_car_types"] = np.array([22] * 4)
-options["num_car_types"] = 4  # This specification seem to converge
-
-# options['max_age_of_car_types'] = np.array([23] * 4) # np.array([22] * 4) # this one does not but it does not diverge
-# TODO: I think there is something off with the purge decisions in the data.
-
-
-# set up state and decision space indexing
-state_space, map_state_to_index, price_index, used_car_states = setup_state_space(
-    options
-)
-
+# Load settings
 model_struct_arrays = create_model_struct_arrays(
     options=options,
+    model_funcs=jpe_model,
 )
-decision_space, _ = setup_decision_space(options)
 
+# load main indexer
+main_df = main_index.create_main_df(
+        model_struct_arrays=model_struct_arrays,
+        params=params,
+        options=options,
+)
 
-# Load settings
 # Read JPE data
 infile = in_path + "/ccps_all_years.csv"
 dat = pd.read_csv(infile)  # index_col=[0,1,2])
 # dat.index.names = ['consumer_type', 'car_type', 'car_age']
-dat = dat.set_index(["tau", "s_type", "s_age", "d_own", "d_type", "d_age"])
+dat = dat.rename(columns={"tau": "consumer_type"})
+states = model_struct_arrays['state_index_func'](car_type_state=dat['s_type'].values+1, car_age_state=1,)
+
+dat = dat['decision'] = 
+#dat = dat.set_index(["tau", "s_type", "s_age", "d_own", "d_type", "d_age"])
+
+breakpoint()
+
+
 
 dat_scrap = pd.read_csv(in_path + "/scrap_all_years.csv")  # index_col=[0,1,2])
 
 # load prices:
+# initialize price dict
+prices = {'new_car_prices': None, 'used_car_prices': None, 'scrap_car_prices': None}
+
 years = np.arange(1996, 2009).tolist()
-indir_non_data_moments = "./data/model_inputs/small_model_scrap_and_price_from_eqb/"
+indir_non_data_moments = "./analysis/data/model_inputs/small_model_scrap_and_price_from_eqb/"
+breakpoint()
 prices_data = data.read_price_data(
-    "./data/8x4/", indir_non_data_moments, years, how="unweighted", like_jpe=True
+    "./analysis/data/8x4/", indir_non_data_moments, years, how="unweighted", like_jpe=True
 )
-indir_non_data_moments = "./data/model_inputs/small_model_scrap_and_price_from_eqb/"
+indir_non_data_moments = "./analysis/data/model_inputs/small_model_scrap_and_price_from_eqb/"
 prices_data_eqb = data.read_price_data(
-    "./data/8x4/", indir_non_data_moments, years, how="custom", like_jpe=False
+    "./analysis/data/8x4/", indir_non_data_moments, years, how="custom", like_jpe=False
 )
 
 prices["new_car_prices"] = prices_data["new_car_prices"] / 1000
 #prices["used_car_prices"] = prices_data["used_car_prices"]/ 1000
+
+# adding custom dicounted prices
 used_car_prices_calc = lambda new_prices, max_age, dep_rate:  new_prices.reshape(-1,1) *(1 - dep_rate) ** np.arange(0,max_age-1)
 disc_fac = 0.09
 used_car_prices = used_car_prices_calc(prices['new_car_prices'], 25, disc_fac)
@@ -120,6 +115,9 @@ state_space = model_struct_arrays["state_space"]
 decision_space = model_struct_arrays["decision_space"]
 
 # add the sidx index
+# This has to be done in a cleverer way...
+
+breakpoint()
 dat = dat.reset_index()
 state_array = dat[["s_type", "s_age"]].values
 dat["sidx"] = map_state_to_index[state_array[:, 0], state_array[:, 1]]

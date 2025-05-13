@@ -48,7 +48,7 @@ params, options = jpe_model["update_params_and_options"](
 ) = simulate.load_or_simulate_data(params, options, jpe_model, sim_options, path_dict["sim_data"])
 plt.plot(df.loc[pd.IndexSlice[0,0,:,:]].groupby(['state']).sum())
 plt.show()
-breakpoint()
+
 for key in model_struct_arrays.keys():
     model_struct_arrays[key] = np.array(model_struct_arrays[key])
 
@@ -66,7 +66,7 @@ main_df = main_index.create_main_df(
         params=params,
         options=options,
 )
-
+breakpoint()
 # creating data independent regressors
 X_indep, model_specification = regressors.create_data_independent_regressors(
     main_df=main_df,
@@ -77,14 +77,6 @@ X_indep, model_specification = regressors.create_data_independent_regressors(
     options=options,
     specification=specification,
 )
-# X_indep.loc[pd.IndexSlice[0, :, :, :, :], "consumer_dummy_0"] = 1
-# X_indep.loc[pd.IndexSlice[0, 51, :, :, :], "consumer_dummy_1"] = 0
-# X_indep.loc[pd.IndexSlice[1, :, :, :, :], "consumer_dummy_1"] = 1
-# X_indep.loc[pd.IndexSlice[1, 51, :, :, :], "consumer_dummy_0"] = 0
-
-# model_specification.extend(["consumer_dummy_0", "consumer_dummy_1"])
-# X_indep.loc[pd.IndexSlice[:, :, :, :, :], "consumer_dummy_0"] = 1
-# model_specification.append("consumer_dummy_0")
 
 # mc simulation
 Nbars = mc_options['Nbars'] # if instead np.arange[0, est_size, x] we can do a sequentially increasing set of mc runs
