@@ -35,7 +35,6 @@ def create_main_df(model_struct_arrays, params, options):
     # Very wierd behaviour that must be a bug. dict within an array...
     # This only occurs in the simulation code. For some reason not in the 
     #TODO: FIX THIS (see GitHub Issue #12)
-    breakpoint()
     try:
         post_decision_state_dict=model_struct_arrays['post_decision_states_dict'].flatten()[0]
     except:

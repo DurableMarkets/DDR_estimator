@@ -69,21 +69,42 @@ main_df = main_index.create_main_df(
         options=options,
 )
 
-# Read JPE data
+# Read JPE data - CCPs
 infile = in_path + "/ccps_all_years.csv"
+#breakpoint()
 dat = pd.read_csv(infile)  # index_col=[0,1,2])
 # dat.index.names = ['consumer_type', 'car_type', 'car_age']
 dat = dat.rename(columns={"tau": "consumer_type"})
-states = model_struct_arrays['state_index_func'](car_type_state=dat['s_type'].values+1, car_age_state=1,)
+dat['consumer_type'] = dat['consumer_type'] - 1
 
-dat = dat['decision'] = 
-#dat = dat.set_index(["tau", "s_type", "s_age", "d_own", "d_type", "d_age"])
 
+dat['state'] = model_struct_arrays['state_index_func'](
+    car_type_state=dat['s_type'].values, 
+    car_age_state=dat['s_age'].values,
+)
+dat['decision'] = model_struct_arrays['decision_index_func'](
+    own_decision=dat['d_own'].values, 
+    car_type_decision=dat['d_type'].values, 
+    car_age_decision=dat['d_age'].values,
+)
+# dat cleanup
+dat=dat.set_index(['consumer_type','decision', 'state'])[['count', 'count_state', 'ccp']]
+dat=main_df.merge(dat, how='left', on=['consumer_type', 'decision', 'state'])
+
+
+# read JPE data - scrap ccps
 breakpoint()
-
-
-
 dat_scrap = pd.read_csv(in_path + "/scrap_all_years.csv")  # index_col=[0,1,2])
+dat_scrap = dat_scrap[dat_scrap["s_age"] <= 22]
+dat_scrap['state'] = model_struct_arrays['state_index_func'](
+    car_type_state=dat_scrap['s_type'].values, 
+    car_age_state=dat_scrap['s_age'].values,
+)
+
+dat_scrap = dat_scrap.rename(columns={"tau": "consumer_type"})
+dat_scrap['consumer_type'] = dat_scrap['consumer_type'] - 1
+dat_scrap = dat_scrap.set_index(['consumer_type','state'])
+breakpoint()
 
 # load prices:
 # initialize price dict
@@ -91,7 +112,7 @@ prices = {'new_car_prices': None, 'used_car_prices': None, 'scrap_car_prices': N
 
 years = np.arange(1996, 2009).tolist()
 indir_non_data_moments = "./analysis/data/model_inputs/small_model_scrap_and_price_from_eqb/"
-breakpoint()
+
 prices_data = data.read_price_data(
     "./analysis/data/8x4/", indir_non_data_moments, years, how="unweighted", like_jpe=True
 )
@@ -118,33 +139,6 @@ decision_space = model_struct_arrays["decision_space"]
 # This has to be done in a cleverer way...
 
 breakpoint()
-dat = dat.reset_index()
-state_array = dat[["s_type", "s_age"]].values
-dat["sidx"] = map_state_to_index[state_array[:, 0], state_array[:, 1]]
-dat = dat.set_index(["tau", "s_type", "s_age", "d_own", "d_type", "d_age"])
-
-dat_scrap = dat_scrap.reset_index()
-dat_scrap = dat_scrap[dat_scrap["s_age"] <= 22]
-state_array = dat_scrap[["s_type", "s_age"]].values
-
-dat_scrap["sidx"] = map_state_to_index[state_array[:, 0], state_array[:, 1]]
-dat_scrap = dat_scrap.set_index(["tau", "s_type", "s_age"])
-
-# add the didx index:
-didxs = (
-    pd.DataFrame(decision_space, columns=["d_own", "d_type", "d_age"])
-    .reset_index()
-    .rename(columns={"index": "didx"})
-    .set_index(["d_own", "d_type", "d_age"])
-)
-dat = dat.join(didxs)
-# reset index and remove some columns
-
-dat = dat.reset_index()[
-    ["tau", "s_type", "s_age", "sidx", "didx", "ccp", "count"]
-].set_index(["tau", "s_type", "s_age"])
-dat.index.names = ["consumer_type", "car_type", "car_age"]
-dat_scrap.index.names = ["consumer_type", "car_type", "car_age"]
 
 scrap_probabilities = data.prepare_scrap_data(dat_scrap, options)
 

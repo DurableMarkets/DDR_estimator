@@ -2,11 +2,11 @@
 import numpy as np 
 import pandas as pd 
 import os 
-import data 
+import jpe_replication.data as data 
 pd.set_option('display.max_rows', 1000)
 
-indir  = './data/8x4/'
-outdir = './data/8x4_eqb/'
+indir  = './analysis/data/8x4/'
+outdir = './analysis/data/8x4_eqb/'
 
 # verify that the two dirs exist
 assert os.path.isdir(indir)
@@ -16,7 +16,7 @@ assert os.path.isdir(outdir)
 years = np.arange(1996,2009).tolist()
 #years = np.arange(2001,2002).tolist()
 years = [str(y) for y in years]
-prices = data.read_price_data(indir=indir, years=years, how='unweighted')
+prices = data.read_price_data(indir_jpe_data=indir, indir_moments=None, years=years, how='unweighted', like_jpe=True)
 
 dat = data.read_data(years=years, indir=indir, read_scrap=False)
 dat_scrap = data.read_scrap_data(indir=indir, aggregate=True)
@@ -25,7 +25,6 @@ dat_scrap = data.read_scrap_data(indir=indir, aggregate=True)
 dat.loc[dat['count'].isna(), 'count'] = 2
 
 # construct indices 
-breakpoint()
 state_space_translation = data.translate_state_indices(dat[['s_car_type', 's_car_age']])
 decision_space_translation = data.translate_decision_indices(dat[['d_car_type', 'd_car_age']])
 
@@ -75,12 +74,11 @@ shares = dat # pointer
 
 shares['count_state'] = shares.groupby(level=['tau', 's_type', 's_age'])['count'].transform('sum')
 
-#shares=shares.join(share_denom, rsuffix='_denom')
 shares['ccp'] = shares['count']/shares['count_state']
 
 
 assert np.isclose(shares['ccp'].groupby(level=[0,1,2]).sum() , 1.0).all()
-breakpoint()
+
 # setting the index
 shares.to_csv(outdir + 'ccps_all_years.csv', index=True)
 dat_scrap.to_csv(outdir + 'scrap_all_years.csv', index=True)
