@@ -13,17 +13,17 @@ import jax
 import pandas as pd
 import matplotlib.pyplot as plt
 import logit.ddr_tools.main_index as main_index
-
+from data_setups.sim_options import create_folder
 
 import pickle
-from data_setups.options import get_model_specs
+from data_setups.sim_options import get_model_specs
 from set_path import get_paths
 
 from eqb.equilibrium import (
     create_model_struct_arrays,
     equilibrium_solver,
 )
-import jpe_replication.data as data
+import jpe_replication.process_data.old.data as data
 
 jax.config.update("jax_enable_x64", True)
 pd.set_option("display.max_rows", 705)
@@ -33,13 +33,20 @@ path_dict = get_paths()
 # Load jpe model
 jpe_model = eqb.load_models("jpe_model")
 
+paths = { 
+    "indir": "./analysis/data/8x4/",
+    "outdir": "./analysis/data/8x4_eqb/",
+}
+
+# load model: 
+
 
 ### MODEL SPECIFICATION ###
 out_folder = 'wls_on_jpe'
-sim_options, mc_options, params_update, options_update, specification, out_dir=get_model_specs(
-    lambda folder: f'./output/replication/{out_folder}')
 
+output_dir= create_folder(f'./output/replication/{out_folder}')
 
+options_update, params_update = dict(), dict()
 
 # update
 options_update["n_consumer_types"] = 8
@@ -50,8 +57,20 @@ params, options = jpe_model["update_params_and_options"](
     params=params_update, options=options_update
 )
 
-# Use linear_specification = True for linear specification
-linear_specification = True
+n_consumer_types = options["n_consumer_types"]
+n_car_types = options["n_car_types"]
+
+specification = {
+    "mum": (n_consumer_types, 1),
+    "buying": (n_consumer_types, 1),
+    #"buying": None,
+    "scrap_correction": (n_consumer_types, 1),
+    "u_0": (n_consumer_types, n_car_types),
+    "u_a": (n_consumer_types, 1),
+    "u_a_sq": None,
+    "u_a_even": None,
+}
+
 
 in_path = "./analysis/data/8x4_eqb"
 file = in_path + "/arrays_prices_options.pickle"
@@ -77,7 +96,6 @@ dat = pd.read_csv(infile)  # index_col=[0,1,2])
 dat = dat.rename(columns={"tau": "consumer_type"})
 dat['consumer_type'] = dat['consumer_type'] - 1
 
-
 dat['state'] = model_struct_arrays['state_index_func'](
     car_type_state=dat['s_type'].values, 
     car_age_state=dat['s_age'].values,
@@ -90,7 +108,6 @@ dat['decision'] = model_struct_arrays['decision_index_func'](
 # dat cleanup
 dat=dat.set_index(['consumer_type','decision', 'state'])[['count', 'count_state', 'ccp']]
 dat=main_df.merge(dat, how='left', on=['consumer_type', 'decision', 'state'])
-
 
 # read JPE data - scrap ccps
 breakpoint()
