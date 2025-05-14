@@ -1,12 +1,13 @@
 import numpy as np
 import yaml 
 import os
+from data_setups.tools import create_folder
 def get_model_specs(output_dir_func):
     # Load yaml file name 
 
     with open(os.path.join(os.path.dirname(__file__), "pick_setup.yml"), 'r') as stream:
         options = yaml.safe_load(stream)
-    setup_name = options['name']
+    setup_name = options['sim_setup_name']
     # load sim options 
     if setup_name == 'setup_1':
         sim_options, mc_options, params_update, options_update, specification = get_setup_1()
@@ -32,14 +33,6 @@ def sim_option_checks(estimation_size, chunk_size, N_mc, sample_iter):
         assert (
             estimation_size <= chunk_size * sample_iter
         ), "estimation_size should be smaller or equal to chunk_size * mc_iter"
-
-def create_folder(folder_name):
-    """
-    Create a folder if it does not exist.
-    """
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
-        print(f"Folder '{folder_name}' created.")
 
 def get_setup_1(): 
     num_consumers = 2

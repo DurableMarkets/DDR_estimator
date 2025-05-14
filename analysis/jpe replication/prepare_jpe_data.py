@@ -1,18 +1,54 @@
+import logit.ddr_tools.main_index as main_index
 import jpe_replication.process_data.choice as choice
 import jpe_replication.process_data.scrap as scrap
 import numpy as np
-#import jpe_replication.process_data.prices as prices
+from data_setups.jpe_options import get_model_specs
+import eqb
+from eqb.equilibrium import (
+    create_model_struct_arrays,
+)
+
 # Options:
-kwargs = {
-    'indir': './analysis/data/8x4/',
-    'outdir': './analysis/data/8x4_eqb/',
-    'years': np.arange(1996, 2009).astype(str).tolist(),
-    'max_age_car': 22,
-}
+
+# model setup
+jpe_model = eqb.load_models("jpe_model")
+
+params_update, options_update, specification, folders, kwargs = get_model_specs()
+
+params, options = jpe_model["update_params_and_options"](
+    params=params_update, options=options_update
+)
+
+# Load settings
+model_struct_arrays = create_model_struct_arrays(
+    options=options,
+    model_funcs=jpe_model,
+)
+
+# load main indexer
+main_df = main_index.create_main_df(
+        model_struct_arrays=model_struct_arrays,
+        params=params,
+        options=options,
+)
 
 # Create choice data 
-choice.process_choice_data(**kwargs)
+choice.process_and_reformat_choice_data(
+    model_struct_arrays=model_struct_arrays,
+    main_df=main_df,
+    folders=folders,
+    years=kwargs['years'],
+    max_age_car=kwargs['max_age_car'],
+)
 
 # Create scrap data 
-scrap.process_scrap_data(**kwargs)
+scrap.process_and_reformat_scrap_data(
+    model_struct_arrays=model_struct_arrays,
+    main_df=main_df,
+    folders=folders,
+    years=kwargs['years'],
+)
+
+# Create price data 
+
 

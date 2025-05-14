@@ -72,8 +72,8 @@ def create_state_transition_matrix(feasible_idx, model_struct_arrays, model_func
         decisions[consumer_types == 0], 
         states[consumer_types==0],
     )
-    
-    post_decision_states = model_struct_arrays["post_decision_state_idxs"][states, decisions]
+
+    post_decision_states = model_struct_arrays["post_decision_state_idxs"][states.values, decisions.values]
     next_period_states = model_struct_arrays['next_period_states_idx'][:,1][post_decision_states]
 
     # construct iota matrix

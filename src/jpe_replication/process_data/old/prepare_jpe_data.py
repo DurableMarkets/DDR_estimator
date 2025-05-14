@@ -2,7 +2,7 @@
 import numpy as np 
 import pandas as pd 
 import os 
-import jpe_replication.data as data 
+import jpe_replication.process_data.old.data as data 
 pd.set_option('display.max_rows', 1000)
 
 indir  = './analysis/data/8x4/'

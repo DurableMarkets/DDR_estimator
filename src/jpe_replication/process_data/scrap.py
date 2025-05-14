@@ -9,16 +9,57 @@ from jpe_replication.process_data.jpe_specific_format_tools.format_tools import 
 )
 pd.set_option('display.max_rows', 1000)
 
+
+def process_and_reformat_scrap_data(
+        model_struct_arrays,
+        main_df,
+        folders: dict,
+        years: list = np.arange(1996,2009).astype(str).tolist(),
+    ):
+    """
+    First processes data as it looks like in the JPE data set based on the raw data.
+    Then reformats the data such that it fits into the setup in this repo.
+    """
+    
+    dat_scrap=process_scrap_data(
+        indir=folders['in_data'], 
+        outdir=folders['out_data'], 
+        years=years, 
+    )
+    # storing data
+    dat_scrap.to_csv(folders['out_data'] + 'scrap_all_years.csv', index=True)
+    print(f'scrap data saved to file scrap_all_years.csv at {folders['out_data']}')
+
+    dat_scrap = reformat_scrap_data(
+        in_path=folders['out_data'],
+        model_struct_arrays=model_struct_arrays,
+    )
+    # Merge onto main_df index
+    main_df=main_df[[]].reset_index().set_index(['consumer_type', 'state'])
+    main_df = main_df.loc[~main_df.index.duplicated(keep='first')][[]]
+    dat_scrap = main_df.join(dat_scrap, how='left')
+    dat_scrap = dat_scrap[['scrap_counts', 'counts', 'scrap_prob']]
+    # set all clunker states to 1.0
+    clunker_states = np.unique(model_struct_arrays['clunker_idx'])
+    clunker_states =  clunker_states[clunker_states > -1] # removes -9999
+    dat_scrap.loc[ pd.IndexSlice[:, clunker_states], :] = 1.0
+    # set the no car state to 0.0
+    no_car_state = model_struct_arrays['state_index_func'](car_type_state=0,car_age_state=0)
+    dat_scrap.loc[ pd.IndexSlice[:, no_car_state], :] = 0.0
+    # remaining nans are padded with 0.0
+    dat_scrap[dat_scrap.isna()] = 0.0
+
+    # store the data
+    dat_scrap.to_pickle(folders['out_data'] + 'scrap_all_years_reformatted.pkl')
+    print(f'scrap data saved to file scrap_all_years_reformatted.pkl at {folders['out_data']}')
+
+
 def process_scrap_data(
         indir, 
         outdir, 
         years: list = np.arange(1996,2009).astype(str).tolist(), 
-        max_age_car: int = 22,
+        #max_age_car: int = 22,
     ):
-    # verify that the two dirs exist
-    assert os.path.isdir(indir)
-    assert os.path.isdir(outdir)
-
     # read data
     dat_scrap = read_scrap_data(indir=indir, aggregate=True)
 
@@ -39,9 +80,7 @@ def process_scrap_data(
     print(f'Removing {np.sum(~I)} states with age > {max_age_car} in scrap data')
     dat_scrap = dat_scrap.loc[I]
 
-    # storing data
-    dat_scrap.to_csv(outdir + 'scrap_all_years.csv', index=True)
-    print(f'scrap data saved to file scrap_all_years.csv at {outdir}')
+    return dat_scrap
 
 
 def read_scrap_data(indir, aggregate: bool = False):
@@ -73,5 +112,44 @@ def read_scrap_data(indir, aggregate: bool = False):
     
     return dta_scrap    
 
-def reformat_counts_data(indir):
-    return None
+def reformat_scrap_data(in_path, model_struct_arrays):
+    dat_scrap = pd.read_csv(in_path + "/scrap_all_years.csv")  # index_col=[0,1,2])
+    dat_scrap = dat_scrap[dat_scrap["s_age"] <= 22]
+    dat_scrap['state'] = model_struct_arrays['state_index_func'](
+        car_type_state=dat_scrap['s_type'].values, 
+        car_age_state=dat_scrap['s_age'].values,
+    )
+
+    dat_scrap = dat_scrap.rename(columns={"tau": "consumer_type"})
+    dat_scrap['consumer_type'] = dat_scrap['consumer_type'] - 1
+    dat_scrap = dat_scrap.set_index(['consumer_type','state'])
+
+    dat_scrap.rename(columns={
+        "pr_scrap": "scrap_prob",
+        "count_scrap": "scrap_counts",
+        "count": "counts",
+    }, inplace=True)
+    
+    return dat_scrap
+
+
+def scrap_df_to_numpy(dat_scrap, options):
+    """Constructs a matrix of size (Ntypes x(Ncartypes*Ncarages + 1), that mimics the
+    format used in simulations."""
+
+    num_consumer_types = options["n_consumer_types"]
+    num_car_types = options["n_car_types"]
+    max_age_of_car_types = options["max_age_of_car_types"][0]
+
+    prob_scrap = (
+        dat_scrap.reset_index()
+        .set_index(["consumer_type", "sidx"])["pr_scrap"]
+        .unstack(level="sidx")
+        .values
+    )
+    scrap_probabilities = np.ones(
+        (num_consumer_types, num_car_types * max_age_of_car_types + 1)
+    )
+    scrap_probabilities[:, 0 : (num_car_types * max_age_of_car_types)] = prob_scrap
+
+    return scrap_probabilities

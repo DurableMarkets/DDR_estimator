@@ -2,12 +2,44 @@
 import numpy as np 
 import pandas as pd 
 import os 
-import jpe_replication.data as data 
+import jpe_replication.process_data.old.data as data 
 from jpe_replication.process_data.helpers import read_file
 from jpe_replication.process_data.jpe_specific_format_tools.format_tools import (
     translate_state_indices, 
     translate_decision_indices
 )
+
+def process_and_reformat_choice_data(
+        model_struct_arrays,
+        main_df,
+        folders: dict,
+        years: list = np.arange(1996,2009).astype(str).tolist(),
+        max_age_car: int = 22,
+
+    ):
+    """
+    First processes data as it looks like in the JPE data set based on the raw data.
+    Then reformats the data such that it fits into the setup in this repo.
+    """
+    shares=process_choice_data(
+        indir=folders['in_data'], 
+        outdir=folders['out_data'], 
+        years=years, 
+        max_age_car=max_age_car,
+    )
+    shares.to_csv(folders['out_data'] + 'ccps_all_years.csv', index=True)
+    print(f'Count data saved to file ccps_all_years.csv at {folders['out_data']}')
+
+
+    # reformats the data for the specified model structure
+    dat=reformat_choice_data(
+        main_df=main_df, 
+        indir=folders['out_data'], 
+        model_struct_arrays=model_struct_arrays,
+    )    
+    # save the data
+    dat.to_pickle(folders['out_data'] + 'ccps_all_years_reformatted.pkl')
+    print(f'Count data saved to file ccps_all_years_reformatted.pkl at {folders['out_data']}')
 
 def process_choice_data(
         indir, 
@@ -15,10 +47,6 @@ def process_choice_data(
         years: list = np.arange(1996,2009).astype(str).tolist(), 
         max_age_car: int = 22,
     ):
-    # verify that the two dirs exist
-    assert os.path.isdir(indir)
-    assert os.path.isdir(outdir)
-
     # read data
     dat = read_counts_data(years=years, indir=indir, read_scrap=False)
 
@@ -65,19 +93,13 @@ def process_choice_data(
 
     shares['ccp'] = shares['count']/shares['count_state']
 
-
     assert np.isclose(shares['ccp'].groupby(level=[0,1,2]).sum() , 1.0).all()
 
-    # setting the index
-    shares.to_csv(outdir + 'ccps_all_years.csv', index=True)
-    print(f'Count data saved to file ccps_all_years.csv at {outdir}')
+    return shares
 
 
 def read_counts_data(years: list, indir, read_scrap: bool = False):
     """Reads data from years in list years.
-
-    If read_scrap is True, reads scrap data as well.
-
     """
     dta = read_file(indir + f"counts_{years[0]}.xlsx")
     for y in years[1:]:
@@ -85,5 +107,34 @@ def read_counts_data(years: list, indir, read_scrap: bool = False):
 
     return dta
 
-def reformat_counts_data(indir):
-    return None
+def reformat_choice_data(main_df, indir, model_struct_arrays):
+    """
+    Takes the JPE data and reformats it into something that works with 
+    the structure in this repo. 
+    """
+    infile = indir + "/ccps_all_years.csv"
+    dat = pd.read_csv(infile)  
+   
+    dat = dat.rename(columns={"tau": "consumer_type"})
+    dat['consumer_type'] = dat['consumer_type'] - 1
+
+    dat['state'] = model_struct_arrays['state_index_func'](
+        car_type_state=dat['s_type'].values, 
+        car_age_state=dat['s_age'].values,
+    )
+    dat['decision'] = model_struct_arrays['decision_index_func'](
+        own_decision=dat['d_own'].values, 
+        car_type_decision=dat['d_type'].values, 
+        car_age_decision=dat['d_age'].values,
+    )
+    # dat cleanup
+    dat=dat.set_index(['consumer_type','decision', 'state'])[['count', 'count_state', 'ccp']]
+    dat=main_df.merge(dat, how='left', on=['consumer_type', 'decision', 'state'])
+
+    dat.rename(columns={
+        "count": "counts",
+        "count_state": "counts_state",
+        "ccp": "ccps",
+    }, inplace=True)
+
+    return dat

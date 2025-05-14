@@ -13,7 +13,7 @@ import jax
 from tqdm import tqdm
 import numpy as np
 import eqb
-from data_setups.options import get_model_specs
+from data_setups.sim_options import get_model_specs
 
 from set_path import get_paths
 jax.config.update("jax_enable_x64", True)
