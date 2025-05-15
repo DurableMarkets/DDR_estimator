@@ -127,10 +127,11 @@ def create_scrap_correction(
 
     # scrap correction terms 
     for ntype in range(0, options["n_consumer_types"]):
+        for ncartype in range(1, options['n_car_types']+1):
             X.loc[
-                pd.IndexSlice[ntype, :, :, :, :], scrap_cols_flat[ntype]
+                pd.IndexSlice[ntype, :, :, ncartype, :], scrap_cols_looper[ntype][ncartype-1]
             ] = (
-                scrap_correct.loc[pd.IndexSlice[ntype, :, :, :, :], 'scrap_correction'] 
+                scrap_correct.loc[pd.IndexSlice[ntype, :, :, ncartype, :], 'scrap_correction'].values                 
             )
     X = X.loc[:, scrap_cols_flat]
 
