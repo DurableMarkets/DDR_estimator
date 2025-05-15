@@ -61,7 +61,7 @@ def read_price_data(indir_jpe_data, indir_moments, years, how, model_struct_arra
         # scrap prices
 
         scrap_prices = np.array([6.1989, 5.2565, 9.3461, 8.7610])
-
+        #scrap_prices = np.array([0.0, 0.0, 0.0, 0.0])
         prices = {
             "new_car_prices": new_prices,
             "used_car_prices": used_prices,

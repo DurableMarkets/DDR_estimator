@@ -114,8 +114,7 @@ def expected_scrap_price(
 
     s_type, s_age = s
     d_own, d_type, d_age = d
-
-    pscrap = get_price_scrap(s_type, model_struct_arrays, params)
+    pscrap = get_price_scrap(s_type, model_struct_arrays, prices)
 
     # s_type, s_age = s
     # d_own, d_type, d_age = d
@@ -153,11 +152,11 @@ def expected_scrap_price(
     return Ep
 
 
-def get_price_scrap(s_type: int, model_struct_arrays: dict, params: dict) -> float:
+def get_price_scrap(s_type: int, model_struct_arrays: dict, prices: dict) -> float:
     """Returns the scrap price for a given state s=(s_type, s_age)."""
     assert s_type in model_struct_arrays["state_space"][:, 0]
     if s_type == 0:  # outside option
         pscrap = np.nan
     else:
-        pscrap = params["pscrap"][s_type - 1]
+        pscrap = prices["scrap_car_prices"][s_type - 1]
     return pscrap
