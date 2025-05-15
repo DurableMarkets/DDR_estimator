@@ -84,8 +84,8 @@ def calculate_weights(ccps, counts):
         N_is = N.loc[N.index[i]]
 
         # A is the pseudo-inverse of B 
-        A= np.diag(P)
-        #A = np.diag(N_is/N_all*P)
+        #A= np.diag(P)
+        A = np.diag(N_is/N_all*P)
         #A= N_is/ N_all * np.diag(P) # essentially weighing by n_isd and scaling by N_all
         weight_blocks.append(A)
 

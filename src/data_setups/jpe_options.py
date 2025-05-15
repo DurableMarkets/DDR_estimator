@@ -31,14 +31,18 @@ def get_model_specs():
 def get_setup_1(): 
     num_consumers = 8
     num_car_types = 4
-    max_age_car = 24 # Unsure about this one. Should probably be 25 but the JPE paper uses 22.
+    max_age_car = 25 # Unsure about this one. Should probably be 25 but the JPE paper uses 22.
 
     params_update = {
-        #"p_fuel": [0.0],
-        #"acc_0": [-100.0],
-        #"mum": [0.5, 0.5],
-        #"psych_transcost": [2.0, 2.0],
-        #'u_0': np.array([[12.0,12.0],[12.0,12.0]]),
+    "disc_fac": 0.95,
+    #"pnew": prices["new_car_prices"],
+    "transcost": 0.0,
+    "ptranscost": 0.0,
+    # "mum2sigma": 0.5,
+    "pscrap": np.array([6.1989, 5.2565, 9.3461, 8.7610]),
+    "acc_0": np.array([-4.6363, -4.6363, -4.6363, -4.6363]),
+    "acc_a": np.array([0.0, 0.0, 0.0, 0.0]),
+    "acc_even": np.array([0.0, 0.0, 0.0, 0.0]),
     }
 
     options_update = {
@@ -50,11 +54,11 @@ def get_setup_1():
 
     specification = {
     "mum": (num_consumers, 1),
-    "buying": (num_consumers, 1),
+    "buying": (1, 1),
     #"buying": None,
-    "scrap_correction": (num_consumers, 1),
-    "u_0": (num_consumers, num_car_types),
-    "u_a": (num_consumers, 1),
+    "scrap_correction": (1, 1),
+    "u_0": (1, num_car_types),
+    "u_a": (1, num_car_types),
     "u_a_sq": None,
     "u_a_even": None,
     }

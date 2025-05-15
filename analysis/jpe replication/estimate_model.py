@@ -17,6 +17,10 @@ import logit.ddr_tools.dependent_vars as dependent_vars
 import logit.ddr_tools.regressors as regressors
 import logit.prices.prices as dep_prices
 import logit.estimators.pwls as pwls
+import logit.estimators.npwls as npwls
+import logit.estimators.nbinls as nbinls
+import logit.estimators.nls as nls
+
 from data_setups.jpe_options import get_model_specs
 from set_path import get_paths
 
@@ -26,13 +30,19 @@ from eqb.equilibrium import (
 import jpe_replication.process_data.prices as jpe_prices
 
 jax.config.update("jax_enable_x64", True)
-pd.set_option("display.max_rows", 705)
+pd.set_option("display.max_rows", 900)
 
 path_dict = get_paths()
 
 # load model specifications 
 params_update, options_update, specification, folders, kwargs = get_model_specs()
 jpe_model = eqb.load_models("jpe_model")
+
+### CAN BE REMOVED ###
+from scipy import io 
+t=io.loadmat("./analysis/data/model_inputs/small_model_scrap_and_price_from_eqb/" + 'mp_mle_model.mat')
+breakpoint()
+####              ####
 params, options = jpe_model["update_params_and_options"](
     params=params_update, options=options_update
 )
@@ -50,8 +60,12 @@ scraps=pd.read_pickle(
     './analysis/data/setup_1/processed_data/' + 'scrap_all_years_reformatted.pkl'
 )
 
-scrap_probabilities = dependent_vars.calculate_scrap_probabilities(scraps.reset_index())
-breakpoint()
+#scrap_probabilities = dependent_vars.calculate_scrap_probabilities(scraps.reset_index())
+scrap_probabilities = pd.read_csv(
+    "./analysis/data/model_inputs/small_model_scrap_and_price_from_eqb/" + "scrap_probabilities_model.csv", header=None
+)
+scrap_probabilities = scrap_probabilities.values.T
+
 #scrap_probabilities_1 = scrap.scrap_df_to_numpy(scraps.reset_index(), options)
 
 # prices 
@@ -63,17 +77,15 @@ price_data = jpe_prices.read_price_data(
     how='custom', 
     like_jpe=False,
 )
-breakpoint()
 price_data['new_car_prices'] = price_data['new_car_prices']/1000
 
-
+breakpoint()
 # create main df
 main_df = main_index.create_main_df(
     model_struct_arrays=model_struct_arrays,
     params=params,
     options=options,
 )
-breakpoint()
 X_indep, model_specification = regressors.create_data_independent_regressors(
     main_df=main_df,
     prices=price_data,
@@ -83,7 +95,6 @@ X_indep, model_specification = regressors.create_data_independent_regressors(
     options=options,
     specification=specification,
 )
-
 
 # create data dependent regressors
 X_dep, _ = dep_prices.create_data_dependent_regressors(
@@ -98,17 +109,17 @@ X_dep, _ = dep_prices.create_data_dependent_regressors(
 )
 
 
-        # combine independent and dependent regressors
+# combine independent and dependent regressors
 X = dependent_vars.combine_regressors(X_indep, X_dep, model_specification)
 cfps, counts = dependent_vars.calculate_cfps_from_df(choices.reset_index())
 
-breakpoint()
-est, est_post = pwls.owls_regression_mc(
+est, est_post = npwls.owls_regression_mc(
     ccps=cfps, 
     counts=counts, 
     X=X, 
     model_specification=model_specification
 )
+
 
 breakpoint()
 

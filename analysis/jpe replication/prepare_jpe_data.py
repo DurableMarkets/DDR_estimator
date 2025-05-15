@@ -50,5 +50,7 @@ scrap.process_and_reformat_scrap_data(
 )
 
 # Create price data 
+# TODO: I would like to have the price data chosen in the setup so no arbitariness is introduced. 
+# 
 
 

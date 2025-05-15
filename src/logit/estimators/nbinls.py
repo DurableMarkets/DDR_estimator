@@ -41,10 +41,16 @@ def estimate_owls(Y, X, ccps, counts):
     weight_blocks = calculate_weights(ccps, counts)
     X_indices = X.index.droplevel([level for level in X.index.names if level not in ["consumer_type", "state"]]).unique()
     #breakpoint()
+
     xw = jnp.concatenate(
-        [X.loc[X_indices[i][0],:,X_indices[i][1], :, :].values.T 
+        [X.loc[X_indices.get_level_values('consumer_type')[i],:,X_indices.get_level_values('state')[i], :, :].values.T 
         @ weight_blocks[i] for i in range(len(weight_blocks))]
     ,axis=1)
+
+    # xw = jnp.concatenate(
+    #     [X.loc[X_indices[i][0],:,X_indices[i][1], :, :].values.T 
+    #     @ weight_blocks[i] for i in range(len(weight_blocks))]
+    # ,axis=1)
     xwx = xw @ X.values
     xwy = xw @ Y
 
