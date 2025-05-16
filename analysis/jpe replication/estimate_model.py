@@ -52,17 +52,18 @@ model_struct_arrays=create_model_struct_arrays(
     model_funcs=jpe_model,
 )
 
+breakpoint()
 # load data 
 choices=pd.read_pickle(
-    './analysis/data/setup_1/processed_data/' + 'ccps_all_years_reformatted.pkl'
+    folders['out_data'] + 'ccps_all_years_reformatted.pkl'
 )
 scraps=pd.read_pickle(
-    './analysis/data/setup_1/processed_data/' + 'scrap_all_years_reformatted.pkl'
+    folders['out_data'] + 'scrap_all_years_reformatted.pkl'
 )
 scrap_probabilities = dependent_vars.calculate_scrap_probabilities(scraps.reset_index())
 
 price_dict = pd.read_pickle(
-    './analysis/data/setup_1/processed_data/' + 'price_dict.pkl'
+    folders['out_data'] + 'price_dict.pkl'
 )
 
 # create main df
