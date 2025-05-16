@@ -28,21 +28,21 @@ from eqb.equilibrium import (
     create_model_struct_arrays,
 )
 import jpe_replication.process_data.prices as jpe_prices
-
+import jpe_replication.visuals_and_tables as visuals_and_tables
 jax.config.update("jax_enable_x64", True)
 pd.set_option("display.max_rows", 900)
 
 path_dict = get_paths()
 
 # load model specifications 
-params_update, options_update, specification, folders, kwargs = get_model_specs()
+params_update, options_update, specification, pricing_options, scrap_options, folders, kwargs = get_model_specs()
 jpe_model = eqb.load_models("jpe_model")
 
 ### CAN BE REMOVED ###
 from scipy import io 
 t=io.loadmat("./analysis/data/model_inputs/small_model_scrap_and_price_from_eqb/" + 'mp_mle_model.mat')
-breakpoint()
-####              ####
+#### ##### ##### ####
+
 params, options = jpe_model["update_params_and_options"](
     params=params_update, options=options_update
 )
@@ -59,27 +59,12 @@ choices=pd.read_pickle(
 scraps=pd.read_pickle(
     './analysis/data/setup_1/processed_data/' + 'scrap_all_years_reformatted.pkl'
 )
+scrap_probabilities = dependent_vars.calculate_scrap_probabilities(scraps.reset_index())
 
-#scrap_probabilities = dependent_vars.calculate_scrap_probabilities(scraps.reset_index())
-scrap_probabilities = pd.read_csv(
-    "./analysis/data/model_inputs/small_model_scrap_and_price_from_eqb/" + "scrap_probabilities_model.csv", header=None
+price_dict = pd.read_pickle(
+    './analysis/data/setup_1/processed_data/' + 'price_dict.pkl'
 )
-scrap_probabilities = scrap_probabilities.values.T
 
-#scrap_probabilities_1 = scrap.scrap_df_to_numpy(scraps.reset_index(), options)
-
-# prices 
-price_data = jpe_prices.read_price_data(
-    indir_jpe_data="./analysis/data/8x4/", 
-    indir_moments="./analysis/data/model_inputs/small_model_scrap_and_price_from_eqb/", 
-    years=np.arange(1996, 2009).astype(str).tolist(), 
-    model_struct_arrays=model_struct_arrays,
-    how='custom', 
-    like_jpe=False,
-)
-price_data['new_car_prices'] = price_data['new_car_prices']/1000
-
-breakpoint()
 # create main df
 main_df = main_index.create_main_df(
     model_struct_arrays=model_struct_arrays,
@@ -88,7 +73,7 @@ main_df = main_index.create_main_df(
 )
 X_indep, model_specification = regressors.create_data_independent_regressors(
     main_df=main_df,
-    prices=price_data,
+    prices=price_dict,
     model_struct_arrays=model_struct_arrays,
     model_funcs = jpe_model,
     params=params,
@@ -99,7 +84,7 @@ X_indep, model_specification = regressors.create_data_independent_regressors(
 # create data dependent regressors
 X_dep, _ = dep_prices.create_data_dependent_regressors(
     main_df=main_df,
-    prices=price_data,
+    prices=price_dict,
     scrap_probabilities=scrap_probabilities,
     model_struct_arrays=model_struct_arrays,
     model_funcs=jpe_model,
@@ -121,6 +106,14 @@ est, est_post = npwls.owls_regression_mc(
 )
 
 
-breakpoint()
+# Next compare EV dummies from both models
+# Load model EV dummies:
+visuals_and_tables.create_ev_plots(est, folders)
+()
+visuals_and_tables.create_params_table(est, folders)
+# Compaere estimates
 
 
+
+# extracting a new index for parameters (FIXME: Some system of keeping track of coeffficients should be implemented and consolidated across the code)
+# est['variablename_reversed']=est

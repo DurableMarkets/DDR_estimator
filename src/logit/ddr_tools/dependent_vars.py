@@ -41,9 +41,7 @@ def calculate_scrap_probabilities(df):
 
     df = df.set_index(["consumer_type", "state"])
     df = df.groupby(level=["consumer_type", "state"]).sum()
-
     df["scrap_prob"] = df["scrap_counts"] / df["counts"]
-
     scrap_probabilities = df["scrap_prob"].unstack(level=1).values
 
     return scrap_probabilities

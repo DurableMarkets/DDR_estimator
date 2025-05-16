@@ -9,8 +9,24 @@ from jpe_replication.process_data.jpe_specific_format_tools.format_tools import 
 )
 pd.set_option('display.max_rows', 1000)
 
+def get_scrap_data_from_options(scrap_options, model_struct_arrays, main_df):
+    scrap_data_source=scrap_options['how']
 
-def process_and_reformat_scrap_data(
+    if scrap_data_source == 'scrap_data':
+        use_scrap_data(
+            model_struct_arrays=model_struct_arrays,
+            main_df=main_df,
+            folders=scrap_options['folders'],
+            years=scrap_options['years'],
+        )
+    elif scrap_data_source == 'model_moments':
+        use_moments(scrap_options)
+    
+    else: 
+        raise ValueError(f'{scrap_data_source} is not a valid choice of data source')
+
+
+def use_scrap_data(
         model_struct_arrays,
         main_df,
         folders: dict,
@@ -132,24 +148,23 @@ def reformat_scrap_data(in_path, model_struct_arrays):
     
     return dat_scrap
 
+def use_moments(scrap_options):
+    file_path = scrap_options['data_source_path']
+    
+    # load the data 
+    dat_scrap = pd.read_csv(file_path, header=None)
+    # reformat
+    dat_scrap = dat_scrap.unstack()
+    dat_scrap.index.names = ['consumer_type', 'state']
 
-def scrap_df_to_numpy(dat_scrap, options):
-    """Constructs a matrix of size (Ntypes x(Ncartypes*Ncarages + 1), that mimics the
-    format used in simulations."""
+    # Conciling formats. 
+    dat_scrap=dat_scrap.to_frame(name='scrap_prob')
+    dat_scrap['scrap_counts'] = dat_scrap['scrap_prob']
+    dat_scrap['counts'] = 1
 
-    num_consumer_types = options["n_consumer_types"]
-    num_car_types = options["n_car_types"]
-    max_age_of_car_types = options["max_age_of_car_types"][0]
+    # store the data 
+    dat_scrap.to_pickle(scrap_options['out_path'] + 'scrap_all_years_reformatted.pkl')
+    print(f'scrap from moments saved to file scrap_all_years_reformatted.pkl at {scrap_options['out_path']}')
 
-    prob_scrap = (
-        dat_scrap.reset_index()
-        .set_index(["consumer_type", "sidx"])["pr_scrap"]
-        .unstack(level="sidx")
-        .values
-    )
-    scrap_probabilities = np.ones(
-        (num_consumer_types, num_car_types * max_age_of_car_types + 1)
-    )
-    scrap_probabilities[:, 0 : (num_car_types * max_age_of_car_types)] = prob_scrap
 
-    return scrap_probabilities
+

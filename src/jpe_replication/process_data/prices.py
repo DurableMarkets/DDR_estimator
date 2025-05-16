@@ -7,72 +7,49 @@ from jpe_replication.process_data.jpe_specific_format_tools.format_tools import 
     translate_state_indices, 
     translate_decision_indices
 )
-import jax
+import jpe_replication.visuals_and_tables as visuals_and_tables
+from jax.tree_util import tree_map
+import pickle
+
+def get_price_data_from_options(
+        pricing_options, 
+        model_struct_arrays, 
+        main_df,
+    ):
+    data_source =pricing_options['how']
+    if data_source == 'model_moments':
+        new_prices, used_prices, scrap_prices=use_moments(pricing_options)
+    else:
+        raise ValueError(f'{data_source} is not a valid choice of data source')
 
 
-
-def read_price_data(indir_jpe_data, indir_moments, years, how, model_struct_arrays, like_jpe=False):
-    dta = read_file(indir_jpe_data + f"car_attributes.xlsx")
-    years = [int(year) for year in years]
-    np_state_decision_arrays = jax.tree_util.tree_map(
+    # Consturct lookup tool 
+    np_state_decision_arrays = tree_map(
         lambda x: np.array(x), model_struct_arrays
     )
 
-    if how == "weighted":
-        raise NotImplementedError("I have not implemented the price data yet")
+    price_dict = {
+        'new_car_prices': new_prices,
+        'used_car_prices': used_prices,
+        'scrap_car_prices': scrap_prices,
+        'used_prices_indexer': np_state_decision_arrays['map_state_to_price_index'],
+    }
 
-    elif how == "unweighted":
-        # raise NotImplementedError('I have not implemented the price data yet')
-        dta = dta.set_index(["car_type", "car_age", "year"])
-        dta = dta.loc[pd.IndexSlice[:, :, years], :]
+    # store data - pickle it
+    out_file = pricing_options['out_path'] + 'price_dict.pkl'
+    with open(out_file, 'wb') as f:
+        pickle.dump(price_dict, f)
+    
+def use_moments(pricing_options):
+    # new prices 
+    new_prices = pricing_options['new_prices']
+    
+    # used prices:
+    used_prices = pd.read_csv(
+       pricing_options['data_source_path'], header=None
+    ).values.flatten()
+    
+    # scrap prices
+    scrap_prices = pricing_options['scrap_prices']
 
-        prices = dta.groupby(level=["car_type", "car_age"]).mean()
-        if like_jpe:
-            # For some reason the JPE paper uses one year old cars as the new car price instead of 0 year old cars.
-            new_car_age = 1
-            new_prices = prices.loc[pd.IndexSlice[:, new_car_age], "price_new"].values
-        elif not like_jpe:
-            new_car_age = 0
-            new_prices = prices.loc[pd.IndexSlice[:, new_car_age], "price_new"].values
-        
-        used_prices = prices.loc[pd.IndexSlice[:, 1:], "price_new"].values
-        scrap_prices = np.array([0.0] * 4)
-        prices = {
-            "new_car_prices": new_prices,
-            "used_car_prices": used_prices,
-            "scrap_car_prices": scrap_prices,
-        }
-
-    elif how == "custom":
-        dta = dta.set_index(["car_type", "car_age", "year"])
-        dta = dta.loc[pd.IndexSlice[:, :, years], :]
-        prices = dta.groupby(level=["car_type", "car_age"]).mean()
-
-        # new prices
-        new_car_age = 1
-        new_prices = prices.loc[pd.IndexSlice[:, new_car_age], "price_new"].values
-
-        # used prices:
-        # used_prices = pd.read_excel(indir + f'ligevaegtspriser.xlsx').values.flatten() # Insert data here
-        used_prices = pd.read_csv(
-            indir_moments + f"used_car_prices_model.csv", header=None
-        ).values.flatten()
-
-        # scrap prices
-
-        scrap_prices = np.array([6.1989, 5.2565, 9.3461, 8.7610])
-        #scrap_prices = np.array([0.0, 0.0, 0.0, 0.0])
-        prices = {
-            "new_car_prices": new_prices,
-            "used_car_prices": used_prices,
-            "scrap_car_prices": scrap_prices,
-            'used_prices_indexer': np_state_decision_arrays["map_state_to_price_index"],
-        }
-
-    else:
-        raise ValueError(
-            f"how must be either weighted, unweighted or custom, but is {how}"
-        )
-
-    return prices
-
+    return new_prices, used_prices, scrap_prices
