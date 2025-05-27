@@ -21,6 +21,11 @@ def true_ccps(main_df, model_solution, options):
         ccps.index.get_level_values('state').values,
         ccps.index.get_level_values('decision').values,
         ]
+    
+    # reformat: This is dumb - should just make it use the main index 
+    ccps = ccps.loc[:,'ccps']
+    ccps=ccps.reset_index().set_index(['consumer_type', 'state', 'decision'])
+    ccps=ccps.loc[:, "ccps"]
 
     # ccps['ccps_scrap'] = model_solution["ccps_scrap_tau"][
     #     ccps.index.get_level_values('consumer_type').values, 
@@ -28,7 +33,6 @@ def true_ccps(main_df, model_solution, options):
     #     ]
 
 
-    ccps=ccps.loc[:, "ccps"]
 
     return ccps
 
