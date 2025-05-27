@@ -126,14 +126,14 @@ def create_scrap_correction(
     #         X.loc[idx_tau, scrap_col] = Z.loc[idx_tau, "scrap_correction"]
 
     # scrap correction terms 
+    if specification['scrap_correction'][1] > 1:
+         raise ValueError('scrap_correction is not allowed to vary with car_type')
     for ntype in range(0, options["n_consumer_types"]):
         for ncartype in range(0, options['n_car_types']+1): # IMPORTANT ZERO IS INCLUDED
-
-            # This does not work
             X.loc[
-                pd.IndexSlice[ntype, :, :, ncartype, :], scrap_cols_looper[ntype][ncartype-1]
+                pd.IndexSlice[ntype, :, :, :, :], scrap_cols_looper[ntype][0]
             ] = (
-                scrap_correct.loc[pd.IndexSlice[ntype, :, :, ncartype, :], 'scrap_correction'].values                 
+                scrap_correct.loc[pd.IndexSlice[ntype, :, :, :, :], 'scrap_correction'].values                 
             )
     
     X = X.loc[:, scrap_cols_flat]

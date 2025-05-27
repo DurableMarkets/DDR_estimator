@@ -227,12 +227,12 @@ def calculate_weights(ccps, counts):
         #A[-1,-1] = 1
 
         #breakpoint()
-        A = ((np.identity(K) - 1/K * np.ones((K,K)))
-            @ np.diag(1/P) 
-            @ (np.identity(K) - 1/K * np.ones((K,K)))
-        )
+        # A = ((np.identity(K) - 1/K * np.ones((K,K)))
+        #     @ np.diag(1/P) 
+        #     @ (np.identity(K) - 1/K * np.ones((K,K)))
+        # )
 
-
+        #A = np.diag(P) - np.c_[P] @ np.c_[P].T
 
         #ABA = A @ B @ A 
 
