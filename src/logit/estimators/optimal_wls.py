@@ -217,7 +217,7 @@ def calculate_weights(ccps, counts):
         # @(np.identity(K) - np.c_[P] @ np.c_[P].T) 
         # )
 
-        A = ( 
+        A = N_is/N_all*( 
         (np.identity(K) -  1/np.sum(P**2) *np.c_[P] @ np.c_[P].T) 
         @ np.diag(P)
         @(np.identity(K) - 1/np.sum(P**2) *np.c_[P] @ np.c_[P].T) 

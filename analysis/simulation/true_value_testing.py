@@ -5,7 +5,7 @@ import logit.monte_carlo_tools.misc_tools as misc_tools
 import logit.monte_carlo_tools.monte_carlo_tools as monte_carlo_tools
 import logit.ddr_tools.dependent_vars as dependent_vars
 import logit.prices.prices as prices
-import logit.estimators.pwls as pwls
+import logit.estimators.optimal_wls as pwls
 import jax.numpy as jnp
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -28,7 +28,7 @@ jpe_model = eqb.load_models("jpe_model")
 
 ### MODEL SPECIFICATION ###
 sim_options, mc_options, params_update, options_update, specification, out_dir=get_model_specs(
-    lambda model_name: f"./output/simulations/{model_name}/pwls/"
+    lambda model_name: f"./output/simulations/{model_name}/true_values/"
     )
 
 # update
@@ -109,10 +109,10 @@ for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
         ).reset_index()
 
         cfps, counts = dependent_vars.calculate_cfps_from_df(sim_df)
-        #cfps= dependent_vars.true_ccps(main_df, model_solution, options)
+        cfps= dependent_vars.true_ccps(main_df, model_solution, options)
 
         scrap_probabilities = dependent_vars.calculate_scrap_probabilities(sim_df)
-        #scrap_probabilities = model_solution["ccp_scrap_tau"]
+        scrap_probabilities = model_solution["ccp_scrap_tau"]
         
         # Estimate accident parameters
         #acc_0_hat = monte_carlo_tools.calculate_accident_parameters(scrap_probabilities=scrap_probabilities)

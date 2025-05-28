@@ -13,10 +13,13 @@ import jax
 import pandas as pd
 import matplotlib.pyplot as plt
 import logit.ddr_tools.main_index as main_index
+import logit.ddr_tools.dependent_vars as dependent_vars
+import logit.ddr_tools.regressors as regressors
+
 from data_setups.sim_options import create_folder
 
 import pickle
-from data_setups.sim_options import get_model_specs
+from data_setups.jpe_options import get_model_specs
 from set_path import get_paths
 
 from eqb.equilibrium import (
@@ -38,15 +41,10 @@ paths = {
     "outdir": "./analysis/data/8x4_eqb/",
 }
 
-# load model: 
-
-
-### MODEL SPECIFICATION ###
-out_folder = 'wls_on_jpe'
-
-output_dir= create_folder(f'./output/replication/{out_folder}')
-
-options_update, params_update = dict(), dict()
+# Load model options: 
+params_update, options_update, specification, out_dir = get_model_specs(
+    lambda setup_name: f"./output/JPE_replication/{setup_name}/results/"
+)
 
 # update
 options_update["n_consumer_types"] = 8
@@ -56,24 +54,6 @@ options_update["n_car_types"] = 4
 params, options = jpe_model["update_params_and_options"](
     params=params_update, options=options_update
 )
-
-n_consumer_types = options["n_consumer_types"]
-n_car_types = options["n_car_types"]
-
-specification = {
-    "mum": (n_consumer_types, 1),
-    "buying": (n_consumer_types, 1),
-    #"buying": None,
-    "scrap_correction": (n_consumer_types, 1),
-    "u_0": (n_consumer_types, n_car_types),
-    "u_a": (n_consumer_types, 1),
-    "u_a_sq": None,
-    "u_a_even": None,
-}
-
-
-in_path = "./analysis/data/8x4_eqb"
-file = in_path + "/arrays_prices_options.pickle"
 
 # Load settings
 model_struct_arrays = create_model_struct_arrays(
@@ -87,6 +67,35 @@ main_df = main_index.create_main_df(
         params=params,
         options=options,
 )
+
+cfps, counts = dependent_vars.calculate_cfps_from_df(sim_df)
+
+# create data dependent regressors
+X_dep, _ = prices.create_data_dependent_regressors(
+    main_df=main_df,
+    prices=price_dict,
+    scrap_probabilities=scrap_probabilities,
+    model_struct_arrays=model_struct_arrays,
+    model_funcs=jpe_model,
+    params=params,
+    options=options,
+    specification=specification,
+)
+
+
+        # combine independent and dependent regressors
+X = dependent_vars.combine_regressors(X_indep, X_dep, model_specification)
+
+
+est, est_post = nls.owls_regression_mc(
+    ccps=cfps, 
+    counts=counts, 
+    X=X, 
+    model_specification=model_specification
+)
+
+
+
 
 # Read JPE data - CCPs
 infile = in_path + "/ccps_all_years.csv"

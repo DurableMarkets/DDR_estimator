@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.linalg import inv
 from pandas import IndexSlice as idx
 import jax.numpy as jnp
 import pandas as pd
@@ -51,6 +52,10 @@ def estimate_owls(Y, X, ccps, counts):
     # WLS regression
     g0 = np.linalg.solve(xwx, xwy)
 
+    # wls Avar 
+    Avar = Avar(xwx, xw, PsigmaP)
+
+
     preds = X.values @ g0
     residuals = Y - preds
     est_post=pd.DataFrame(
@@ -91,6 +96,10 @@ def calculate_weights(ccps, counts):
 
     return weight_blocks
 
+def Avar(xw, xwx, P):
+    Sigma = np.diag(1/P) - np.ones((P.shape[0],P.shape[0]))
+    
+    return inv(xwx)@ xw @ Sigma @ xw.T @ inv(xwx) 
 
 def playground_test_of_pseudo_inverses(ccps, counts):
     # calc weights

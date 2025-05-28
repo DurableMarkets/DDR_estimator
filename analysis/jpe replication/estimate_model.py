@@ -20,6 +20,8 @@ import logit.estimators.pwls as pwls
 import logit.estimators.npwls as npwls
 import logit.estimators.nbinls as nbinls
 import logit.estimators.nls as nls
+import logit.estimators.optimal_wls as owls
+
 
 from data_setups.jpe_options import get_model_specs
 from set_path import get_paths
@@ -40,9 +42,10 @@ jpe_model = eqb.load_models("jpe_model")
 
 ### CAN BE REMOVED ###
 from scipy import io 
-t=io.loadmat("./analysis/data/model_inputs/small_model_scrap_and_price_from_eqb/" + 'mp_mle_model.mat')
+t=io.loadmat("./analysis/data/model_inputs/large_model_scrap_and_price_from_eqb/" + 'mp_mle_model.mat')
+t=pd.read_pickle("./analysis/data/setup_jpe/processed_data/" + 'est_params_jpe.pkl')
 #### ##### ##### ####
-
+breakpoint()
 params, options = jpe_model["update_params_and_options"](
     params=params_update, options=options_update
 )
@@ -52,7 +55,7 @@ model_struct_arrays=create_model_struct_arrays(
     model_funcs=jpe_model,
 )
 
-breakpoint()
+#breakpoint()
 # load data 
 choices=pd.read_pickle(
     folders['out_data'] + 'ccps_all_years_reformatted.pkl'
@@ -93,7 +96,6 @@ X_dep, _ = dep_prices.create_data_dependent_regressors(
     options=options,
     specification=specification,
 )
-
 
 # combine independent and dependent regressors
 X = dependent_vars.combine_regressors(X_indep, X_dep, model_specification)

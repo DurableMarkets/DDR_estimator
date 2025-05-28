@@ -5,7 +5,7 @@ import logit.monte_carlo_tools.misc_tools as misc_tools
 import logit.monte_carlo_tools.monte_carlo_tools as monte_carlo_tools
 import logit.ddr_tools.dependent_vars as dependent_vars
 import logit.prices.prices as prices
-import logit.estimators.pwls as pwls
+import logit.estimators.npwls as npwls
 import jax.numpy as jnp
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -28,7 +28,7 @@ jpe_model = eqb.load_models("jpe_model")
 
 ### MODEL SPECIFICATION ###
 sim_options, mc_options, params_update, options_update, specification, out_dir=get_model_specs(
-    lambda model_name: f"./output/simulations/{model_name}/pwls/"
+    lambda model_name: f"./output/simulations/{model_name}/npwls/"
     )
 
 # update
@@ -57,6 +57,7 @@ price_dict = misc_tools.construct_price_dict(
     params=params,
     options=options,
 )
+
 # Create main index used for constructing regressors
 main_df = main_index.create_main_df(
         model_struct_arrays=model_struct_arrays,
@@ -112,8 +113,9 @@ for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
         #cfps= dependent_vars.true_ccps(main_df, model_solution, options)
 
         scrap_probabilities = dependent_vars.calculate_scrap_probabilities(sim_df)
-        #scrap_probabilities = model_solution["ccp_scrap_tau"]
-        
+        scrap_probabilities = model_solution["ccp_scrap_tau"]
+
+
         # Estimate accident parameters
         #acc_0_hat = monte_carlo_tools.calculate_accident_parameters(scrap_probabilities=scrap_probabilities)
         
@@ -134,8 +136,9 @@ for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
         )
         # combine independent and dependent regressors
         X = dependent_vars.combine_regressors(X_indep, X_dep, model_specification)
+
         # Estimate 
-        est, est_post = pwls.owls_regression_mc(
+        est, est_post = npwls.owls_regression_mc(
             ccps=cfps, 
             counts=counts, 
             X=X, 
