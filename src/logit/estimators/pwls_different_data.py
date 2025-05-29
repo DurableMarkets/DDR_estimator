@@ -28,8 +28,13 @@ def owls_regression_mc(X, ccps, counts, model_specification):
     # Creating a X_tilde where alle variables are subtracted by a mean such that X_tilde = X - q.T Q X within each state
     X_tilde = X.join(ccps)
 
+    # testing here
+    # for every state try to multiply (P-qq.T) DxD onto.
+    
+
+
     for varname in model_specification: 
-        X_tilde[varname] = X[varname] - 2*(X[varname]*X_tilde['ccps']).groupby(['consumer_type','state']).sum()
+        X_tilde[varname] = X[varname] - (X[varname]*X_tilde['ccps']).groupby(['consumer_type','state']).sum()
         if varname == 'ev_dums_1_2_0':
             pass#breakpoint()
 
@@ -40,7 +45,7 @@ def owls_regression_mc(X, ccps, counts, model_specification):
     # Creating logY_tilde such that logq - q.T logq
     ccps_local= ccps.copy().to_frame()
     ccps_local['qlogq']= ccps_local['ccps'].values * np.log(ccps_local['ccps'].values)
-    ccps_local['Y'] = np.log(ccps_local['ccps']) - 2*ccps_local.groupby(['consumer_type','state'])['qlogq'].sum()
+    ccps_local['Y'] = np.log(ccps_local['ccps']) - ccps_local.groupby(['consumer_type','state'])['qlogq'].sum()
     #breakpoint()
     #    ccps_local.loc[pd.IndexSlice[0, :], 'ccps'] - ccps_local.loc[pd.IndexSlice[1, :], 'ccps']
     #    X_tilde.loc[pd.IndexSlice[0, :], 'ev_dums_0_0_0'] - X_tilde.loc[pd.IndexSlice[1, :], 'ev_dums_0_0_1']
@@ -68,7 +73,7 @@ def estimate_owls(Y, X, ccps, counts):
     X_indices = X.index.droplevel([level for level in X.index.names if level not in ["consumer_type", "state"]]).unique()
     xw = jnp.concatenate(
         [X.loc[X_indices.get_level_values('consumer_type')[i],:,X_indices.get_level_values('state')[i], :, :].values.T 
-        @ weight_blocks[i] for i in range(len(weight_blocks))]
+        @  weight_blocks[i]  for i in range(len(weight_blocks))]
     ,axis=1)
 
     xwx = xw @ X.values
@@ -110,7 +115,8 @@ def calculate_weights(ccps, counts):
         N_is = N.loc[N.index[i]]
 
         # A is the pseudo-inverse of B 
-        A= np.diag(P) #- np.c_[P] @ np.c_[P].T
+        A= np.diag(P) - np.c_[P] @ np.c_[P].T
+        #A = np.identity(P.shape[0])
         #A = np.diag(N_is/N_all*P)
         #A= N_is/ N_all * np.diag(P) # essentially weighing by n_isd and scaling by N_all
         weight_blocks.append(A)

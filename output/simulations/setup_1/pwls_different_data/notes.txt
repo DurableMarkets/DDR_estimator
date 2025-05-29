@@ -1,2 +1,12 @@
 for some reason I can have iota space with a dummy and retracting Y = logq - 2q.T logq, X =(I - 2q.T) X 
 See commit ... 
+
+I thin what happens is that (P - qqt) = (I - iq.T)P (I - iq.T) And hence whenever I make it so
+that W is not equal to (P-qqt) then it is essentially irrelevant what the weight matrix is. 
+
+So I must still conclude that it is infeasible to P-qqt and it cannot be equated with using P. 
+
+But evaluating (P-qqt) at the true values does seem to get some of the parameters correct, but 
+not all, and the prediction errors are zero. So it indicates that there must be some of the data that is
+in the null space of (P-qqt). 
+
