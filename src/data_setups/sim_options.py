@@ -37,7 +37,7 @@ def sim_option_checks(estimation_size, chunk_size, N_mc, sample_iter):
         ), "estimation_size should be smaller or equal to chunk_size * mc_iter"
 
 def get_setup_1(): 
-    num_consumers = 2
+    num_consumers = 1
     num_car_types = 2
 
     chunk_size = 250_000

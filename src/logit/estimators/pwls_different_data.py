@@ -21,15 +21,17 @@ def owls_regression_mc(X, ccps, counts, model_specification):
     #breakpoint()
 
     # dropping cols that are zero
-    cols_to_drop=X.columns[X.sum() == 0.0]
+    #breakpoint()
+    cols_to_drop=X.columns[X.sum() == 0.0].tolist() #+ X.filter(like='ev').columns.tolist()
     model_specification=[x for x in model_specification if x not in cols_to_drop]
     X = X[model_specification].loc[I]
-
     # Creating a X_tilde where alle variables are subtracted by a mean such that X_tilde = X - q.T Q X within each state
     X_tilde = X.join(ccps)
 
     for varname in model_specification: 
-        X_tilde[varname] = X_tilde[varname] -(X_tilde[varname]*X_tilde['ccps']).groupby(['consumer_type','state']).sum()
+        X_tilde[varname] = X[varname] - 2*(X[varname]*X_tilde['ccps']).groupby(['consumer_type','state']).sum()
+        if varname == 'ev_dums_1_2_0':
+            pass#breakpoint()
 
     #X_tilde=X_tilde-X_tilde.groupby(['consumer_type', 'state']).sum()
     
@@ -38,13 +40,18 @@ def owls_regression_mc(X, ccps, counts, model_specification):
     # Creating logY_tilde such that logq - q.T logq
     ccps_local= ccps.copy().to_frame()
     ccps_local['qlogq']= ccps_local['ccps'].values * np.log(ccps_local['ccps'].values)
-    ccps_local['Y'] = np.log(ccps_local['ccps']) - ccps_local.groupby(['consumer_type','state']).sum()['qlogq']
+    ccps_local['Y'] = np.log(ccps_local['ccps']) - 2*ccps_local.groupby(['consumer_type','state'])['qlogq'].sum()
+    #breakpoint()
+    #    ccps_local.loc[pd.IndexSlice[0, :], 'ccps'] - ccps_local.loc[pd.IndexSlice[1, :], 'ccps']
+    #    X_tilde.loc[pd.IndexSlice[0, :], 'ev_dums_0_0_0'] - X_tilde.loc[pd.IndexSlice[1, :], 'ev_dums_0_0_1']
+    
 
     logY_tilde = ccps_local['Y'].values    
-    #logY = np.log(ccps.values.flatten())
+    logY = np.log(ccps.values.flatten())
 
     B, est_post = estimate_owls(logY_tilde, X_tilde, ccps, counts)
     est = pd.DataFrame(B, index=[model_specification], columns=["Coefficient"])
+    #breakpoint()
     return est, est_post
 
 
@@ -103,7 +110,7 @@ def calculate_weights(ccps, counts):
         N_is = N.loc[N.index[i]]
 
         # A is the pseudo-inverse of B 
-        A= np.diag(P)
+        A= np.diag(P) #- np.c_[P] @ np.c_[P].T
         #A = np.diag(N_is/N_all*P)
         #A= N_is/ N_all * np.diag(P) # essentially weighing by n_isd and scaling by N_all
         weight_blocks.append(A)
