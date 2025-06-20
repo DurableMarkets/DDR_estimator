@@ -75,7 +75,7 @@ X_indep, model_specification = regressors.create_data_independent_regressors(
     options=options,
     specification=specification,
 )
-
+breakpoint()
 # mc simulation
 Nbars = mc_options['Nbars'] # if instead np.arange[0, est_size, x] we can do a sequentially increasing set of mc runs
 ests, est_posts = [], []
