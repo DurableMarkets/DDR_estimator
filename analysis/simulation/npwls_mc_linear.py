@@ -113,8 +113,7 @@ for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
         #cfps= dependent_vars.true_ccps(main_df, model_solution, options)
 
         scrap_probabilities = dependent_vars.calculate_scrap_probabilities(sim_df)
-        scrap_probabilities = model_solution["ccp_scrap_tau"]
-
+        #scrap_probabilities = model_solution["ccp_scrap_tau"]
 
         # Estimate accident parameters
         #acc_0_hat = monte_carlo_tools.calculate_accident_parameters(scrap_probabilities=scrap_probabilities)

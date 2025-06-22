@@ -2,6 +2,7 @@ import numpy as np
 import yaml 
 import os
 from data_setups.tools import create_folder
+from scipy.io import loadmat
 def get_model_specs(output_dir_func):
     # Load yaml file name 
 
@@ -21,6 +22,10 @@ def get_model_specs(output_dir_func):
         sim_options, mc_options, params_update, options_update, specification = get_setup_0()
     elif setup_name == 'setup_ddr_paper':
         sim_options, mc_options, params_update, options_update, specification = get_setup_ddr_paper()
+    elif setup_name == 'setup_paper_250': 
+        sim_options, mc_options, params_update, options_update, specification = get_setup_paper_250()
+    elif setup_name == 'setup_paper_25': 
+        sim_options, mc_options, params_update, options_update, specification = get_setup_paper_25()
 
     else: 
         raise ValueError("Invalid setup name. Please choose a valid setup name.")
@@ -205,6 +210,7 @@ def get_setup_3():
 
     return sim_options, mc_options, params_update, options_update, specification
 
+
 def get_setup_4(): 
     num_consumers = 2
     num_car_types = 2
@@ -315,14 +321,16 @@ def get_setup_0():
     "u_a_even": None,
     }
 
+    return sim_options, mc_options, params_update, options_update, specification
 
-def get_setup_ddr_paper(): 
-    num_consumers = 8
+
+def get_setup_paper_25(): 
+    num_consumers = 2
     num_car_types = 4
 
-    chunk_size = 250_000
-    mc_iter = 1000
-    N_mc = 500_000 #5_000_000 
+    chunk_size = 25_000
+    mc_iter = 10
+    N_mc = 25_000 #5_000_000 
     sample_iter = N_mc * mc_iter // chunk_size
     # Estimation_size controls the sample size used in the estimation
     estimation_size = N_mc  # 1000000
@@ -342,22 +350,22 @@ def get_setup_ddr_paper():
     'Nbars': np.array([estimation_size]),
     'mc_iter': mc_iter, 
     }
-
-    params_update = {}
-    # params_update = {
-    #     "p_fuel": [0.0],
-    #     "acc_0": [-100.0],
-    #     "mum": [0.01, 0.01],
-    #     "psych_transcost": [0.0, 0.0],
-    #     'u_0': np.array([[1.0,1.0],[1.0,1.0]]),
-    #     'disc_fac': np.array([0.0]),
-    # }
+    
+    params_true=loadmat('./analysis/data/model_inputs/small_model_scrap_and_price_from_eqb/mp_mle_model.mat')
+    params_update = {
+        "p_fuel": [0.0],
+        "acc_0": [-100.0],
+        "mum": np.array([0.1, 0.2]), #np.array([x[0][0] for x in params_true['mum'].flatten()]) ,
+        "psych_transcost": np.array([7.0, 7.0]), #np.array([x[0][0] for x in params_true['psych_transcost'].flatten()]) + (np.arange(0,8)-num_consumers/2)/10,
+        'u_0': np.tile(np.array([x[0][0] for x in params_true['u_0'][0,:]]), (num_consumers,1)),
+        'u_a': np.tile(np.array([x[0][0] for x in params_true['u_a'][0,:]]), (num_consumers,1))
+    }
 
     options_update = {
         "n_consumer_types": num_consumers, # Redundant
         "n_car_types": num_car_types,
         "max_age_of_car_types": [25],
-        "tw": [0.5, 0.5],
+        #"tw": [0.5, 0.5],
     }
 
     specification = {
@@ -365,11 +373,71 @@ def get_setup_ddr_paper():
     "buying": (num_consumers, 1),
     #"buying": None,
     "scrap_correction": (num_consumers, 1),
-    "u_0": (num_consumers, num_car_types),
+    "u_0": (num_consumers, 1),
     "u_a": (num_consumers, 1),
     "u_a_sq": None,
     "u_a_even": None,
     }
 
+    return sim_options, mc_options, params_update, options_update, specification
+
+
+
+def get_setup_paper_250(): 
+    num_consumers = 2
+    num_car_types = 4
+
+    chunk_size = 250_000
+    mc_iter = 10
+    N_mc = 250_000 #5_000_000 
+    sample_iter = N_mc * mc_iter // chunk_size
+    # Estimation_size controls the sample size used in the estimation
+    estimation_size = N_mc  # 1000000
+    
+    sim_option_checks(estimation_size, chunk_size, N_mc, sample_iter)
+
+    sim_options = {
+        "n_agents": chunk_size * sample_iter,  # 226675,
+        "n_periods": 1,
+        "seed": 500,
+        "chunk_size": chunk_size,
+        "estimation_size": estimation_size,
+        "use_count_data": True,
+    }
+
+    mc_options = {
+    'Nbars': np.array([estimation_size]),
+    'mc_iter': mc_iter, 
+    }
+    
+    params_true=loadmat('./analysis/data/model_inputs/small_model_scrap_and_price_from_eqb/mp_mle_model.mat')
+    params_update = {
+        "p_fuel": [0.0],
+        "acc_0": [-100.0],
+        "mum": np.array([0.1, 0.2]), #np.array([x[0][0] for x in params_true['mum'].flatten()]) ,
+        "psych_transcost": np.array([7.0, 7.0]), #np.array([x[0][0] for x in params_true['psych_transcost'].flatten()]) + (np.arange(0,8)-num_consumers/2)/10,
+        'u_0': np.tile(np.array([x[0][0] for x in params_true['u_0'][0,:]]), (num_consumers,1)),
+        'u_a': np.tile(np.array([x[0][0] for x in params_true['u_a'][0,:]]), (num_consumers,1))
+    }
+
+    options_update = {
+        "n_consumer_types": num_consumers, # Redundant
+        "n_car_types": num_car_types,
+        "max_age_of_car_types": [25],
+        #"tw": [0.5, 0.5],
+    }
+
+    specification = {
+    "mum": (num_consumers, 1),
+    "buying": (num_consumers, 1),
+    #"buying": None,
+    "scrap_correction": (num_consumers, 1),
+    "u_0": (num_consumers, 1),
+    "u_a": (num_consumers, 1),
+    "u_a_sq": None,
+    "u_a_even": None,
+    }
 
     return sim_options, mc_options, params_update, options_update, specification
+
+
