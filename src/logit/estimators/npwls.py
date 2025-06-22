@@ -22,8 +22,11 @@ def owls_regression_mc(X, ccps, counts, model_specification):
 
     logY = np.log(ccps.values.flatten())
 
-    B, est_post = estimate_owls(logY, X, ccps, counts)
-    est = pd.DataFrame(B, index=[model_specification], columns=["Coefficient"])
+    B, se, est_post = estimate_owls(logY, X, ccps, counts)
+    if se is not None:
+        est = pd.DataFrame(np.array([B,se]).T, index=[model_specification], columns=["Coefficient", 'se'])
+    else:
+        est = pd.DataFrame(B, index=[model_specification], columns=["Coefficient"])
 
     return est, est_post
 
@@ -51,6 +54,10 @@ def estimate_owls(Y, X, ccps, counts):
     # WLS regression
     g0 = np.linalg.solve(xwx, xwy)
 
+    # Compute Avar
+    avar=calculate_asymptotic_var(ccps, counts, X, xwx)
+    se=np.sqrt(np.diag(avar)/counts.sum())
+
     preds = X.values @ g0
     residuals = Y - preds
     est_post=pd.DataFrame(
@@ -63,7 +70,7 @@ def estimate_owls(Y, X, ccps, counts):
               index=X.index
     )
 
-    return g0, est_post
+    return g0, se, est_post
     
 def calculate_weights(ccps, counts):
     
@@ -90,6 +97,55 @@ def calculate_weights(ccps, counts):
         weight_blocks.append(A)
 
     return weight_blocks
+
+def calculate_asymptotic_var(ccps, counts, X, xwx): 
+    
+        N_all = counts.sum()
+
+        N = counts.groupby(
+            ["consumer_type", "state"]
+        ).sum()
+
+
+        pomegaps = create_pomegap_blocks(ccps, counts)     
+
+        # 
+        #xwomegawx_ein = np.einsum('nji,njd,ndk,nks,nsc->ic', X, ws, omegas, ws, X)
+        X_indices = X.index.droplevel([level for level in X.index.names if level not in ["consumer_type", "state"]]).unique()
+        xpomegapx = np.array([
+            X.loc[X_indices.get_level_values('consumer_type')[s],:,X_indices.get_level_values('state')[s], :, :].values.T
+            @ pomegaps[s]
+            @ X.loc[X_indices.get_level_values('consumer_type')[s],:,X_indices.get_level_values('state')[s], :, :].values 
+            for s in range(N.shape[0])]
+            ).sum(axis=0)
+        
+        # # removing any rank deficiencies   
+        xwx_inv = np.linalg.inv(xwx)
+        covar=xwx_inv @ xpomegapx @ xwx_inv
+        return covar     
+
+def create_pomegap_blocks(ccps, counts): 
+    """
+    Only works with weighting by P or nP and nothing else. 
+    Remember here that in general we would have n_s P 1/n_sOmega n_s P  = n_s P omega P  
+    """
+
+    N_all = counts.sum()
+
+    N = counts.groupby(
+        ["consumer_type", "state"]
+    ).sum()
+    pomegap_blocks = []
+    for s in range(N.shape[0]):
+        consumer_type, state=N.index[s]
+        P = ccps.loc[idx[consumer_type, state, :]].values
+        K = P.shape[0]
+        N_is = N.loc[N.index[s]]
+        pomegap =(N_is/N_all)*(np.diag(P) - np.c_[P] @ np.c_[P].T)
+
+        pomegap_blocks.append(pomegap)
+    
+    return pomegap_blocks
 
 
 def playground_test_of_pseudo_inverses(ccps, counts):

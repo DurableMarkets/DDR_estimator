@@ -75,7 +75,7 @@ X_indep, model_specification = regressors.create_data_independent_regressors(
     options=options,
     specification=specification,
 )
-breakpoint()
+
 # mc simulation
 Nbars = mc_options['Nbars'] # if instead np.arange[0, est_size, x] we can do a sequentially increasing set of mc runs
 ests, est_posts = [], []
@@ -176,7 +176,7 @@ runs = pd.concat(ests, axis=0)
 runs.index.names = ["coefficients", "Nbars", "mc_iter"]
 
 means = runs.groupby(["coefficients", "Nbars"], sort=False).mean()
-means = means.rename(columns={"Estimates": "mean"})
+means = means.rename(columns={"Estimates": "mean", 'se': 'MASE'})
 list_of_Nbars = Nbars.tolist()
 
 tuples = list(zip(["Sample size"] * len(list_of_Nbars), list_of_Nbars))
@@ -190,11 +190,14 @@ for i, tuple in enumerate(tuples):
     means.loc[idx[tuple], "mean"] = mc_options['mc_iter']
 
 # long table
-stds = runs.groupby(["coefficients", "Nbars"], sort=False).std()
+if 'MASE' in means.columns:
+    runs_long=runs[['Estimates']]
+
+stds = runs_long.groupby(["coefficients", "Nbars"], sort=False).std()
 stds = stds.rename(columns={"Estimates": "std"})
-p_025 = runs.groupby(["coefficients", "Nbars"], sort=False).quantile(0.025)
+p_025 = runs_long.groupby(["coefficients", "Nbars"], sort=False).quantile(0.025)
 p_025 = p_025.rename(columns={"Estimates": "p2.5"})
-p_975 = runs.groupby(["coefficients", "Nbars"], sort=False).quantile(0.975)
+p_975 = runs_long.groupby(["coefficients", "Nbars"], sort=False).quantile(0.975)
 p_975 = p_975.rename(columns={"Estimates": "p97.5"})
 # stats = pd.concat([true_est, means, stds, p_025, p_975], axis=1)
 stats = pd.concat([means, stds, p_025, p_975], axis=1)
@@ -207,6 +210,7 @@ true_params_df['Nbars'] = 'true value'
 true_params_df = true_params_df.set_index(['coefficients', 'Nbars'])
 true_params_df = true_params_df.rename(columns={'true values': 'mean'})
 true_params_df = true_params_df[['mean']]
+breakpoint()
 stats = pd.concat([stats, true_params_df], axis=0)
 
 #idx = pd.IndexSlice
@@ -237,12 +241,16 @@ runs_largest = runs.loc[pd.IndexSlice[:, largest_Nbar, :], :].reset_index(
     level="Nbars", drop=True
 )
 
+breakpoint()
 means = runs_largest.groupby(["coefficients"], sort=False).mean()
-means = means.rename(columns={"Estimates": "mean"})
+means = means.rename(columns={"Estimates": "mean", 'se': 'MASE'})
 
 means.loc["Sample size", "mean"] = largest_Nbar
 means.loc["MC iterations", "mean"] = mc_options['mc_iter']
 
+
+if 'MASE' in means.columns:
+    runs_largest=runs_largest[['Estimates']]
 
 stds = runs_largest.groupby(["coefficients"], sort=False).std()
 stds = stds.rename(columns={"Estimates": "std"})

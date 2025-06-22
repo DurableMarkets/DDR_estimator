@@ -21,8 +21,8 @@ def create_ev_plots(est, folders):
     fig, axs = plt.subplots(2, 4, figsize=(18, 12))
     for i in range(8):
         ax = axs[i // 4, i % 4]
-        ax.scatter(np.arange(0,101),ev_dummies_est[i, :], label="wddr", marker="+")
-        ax.scatter(np.arange(0,101), ev_dummies_model[i, :], label="eqb", marker="o", facecolors="none", edgecolors='red')
+        ax.scatter(np.arange(0,101),ev_dummies_est[i, :], label="np-ddr", marker="+")
+        ax.scatter(np.arange(0,101), ev_dummies_model[i, :], label="DNFXP", marker="o", facecolors="none", edgecolors='red')
         ax.set_title("Consumer type: {}".format(i))
         ax.legend()
         ax.set_xlabel("State indices")
@@ -82,12 +82,10 @@ def create_params_table(est, folders):
 
     # Creating a table but dropping all EV terms
     table = est.drop("EV term", level=0).reset_index()
-
-
     table.round(4).to_markdown(folders['out_results'] + "results comparison.md")
-    # table.round(4).astype(str).to_latex(out_dir + "results comparison.tex", index=False)
 
-
+    with open(folders['out_results'] + 'asymptotic_var.tex', 'w') as f: 
+        f.write(table.style.format(precision=3).to_latex())
 
 def name_placeholder(df, col_matches, col_nmatches):
     df["consumer_type"] = np.nan

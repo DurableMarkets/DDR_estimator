@@ -63,7 +63,9 @@ choices=pd.read_pickle(
 scraps=pd.read_pickle(
     folders['out_data'] + 'scrap_all_years_reformatted.pkl'
 )
+
 scrap_probabilities = dependent_vars.calculate_scrap_probabilities(scraps.reset_index())
+
 
 price_dict = pd.read_pickle(
     folders['out_data'] + 'price_dict.pkl'
@@ -112,7 +114,7 @@ est, est_post = npwls.owls_regression_mc(
 # Next compare EV dummies from both models
 # Load model EV dummies:
 visuals_and_tables.create_ev_plots(est, folders)
-()
+
 visuals_and_tables.create_params_table(est, folders)
 # Compaere estimates
 

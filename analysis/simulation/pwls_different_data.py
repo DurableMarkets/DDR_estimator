@@ -134,6 +134,7 @@ for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
         )
         # combine independent and dependent regressors
         X = dependent_vars.combine_regressors(X_indep, X_dep, model_specification)
+        breakpoint()
         # Estimate 
         est, est_post = pwls.owls_regression_mc(
             ccps=cfps, 

@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 def calculate_cfps_from_df(df):
     df = df.set_index(["consumer_type", "state", "decision"])
@@ -47,6 +48,9 @@ def calculate_scrap_probabilities(df):
     df = df.groupby(level=["consumer_type", "state"]).sum()
     df["scrap_prob"] = df["scrap_counts"] / df["counts"]
     scrap_probabilities = df["scrap_prob"].unstack(level=1).values
+
+    # if any nan values set them to zero!
+    scrap_probabilities = np.nan_to_num(scrap_probabilities, 0.0)
 
     return scrap_probabilities
 
