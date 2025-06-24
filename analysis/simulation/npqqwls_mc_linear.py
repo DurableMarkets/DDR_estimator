@@ -14,6 +14,7 @@ from tqdm import tqdm
 import numpy as np
 import eqb
 from data_setups.sim_options import get_model_specs
+import re
 
 from set_path import get_paths
 jax.config.update("jax_enable_x64", True)
@@ -150,7 +151,7 @@ for Nbar in tqdm(Nbars, desc="Monte Carlo studies"):
         est = est.set_index(["Nbar", "mc_iter"], append=True)
         
         ests.append(est)
-        #breakpoint()
+
         est_post["mc_iter"] = i
         est_post["Nbar"] = int(Nbar)
         est_post = est_post.reset_index().set_index(
@@ -171,42 +172,86 @@ true_params.index.name = "coefficients"
 # combine runs
 runs = pd.concat(ests, axis=0)
 
-# Renaming indexes
-runs.index.names = ["coefficients", "Nbars", "mc_iter"]
+# regular expression
+varnames = list(runs.index.get_level_values(0))
+test=[re.findall(r'\d+|all', varname) for varname in varnames]
+is_evs = [re.findall(r'ev', varname) == ['ev'] for varname in varnames]
 
-means = runs.groupby(["coefficients", "Nbars"], sort=False).mean()
+var_type = ['ev' if is_ev else 'flow' for is_ev in is_evs]
+varname_clean = [re.match(r'^(.*?)(\d+|all)', varname).group(1) for varname in varnames]
+varname_with_age = [re.search(r'(_age_(sq|even)|_age)', varname).group(0) if re.search(r'(_age_|_age(sq|even))', varname) else '' for varname in varnames]
+varname_final = [varname[0:-1] + age for varname, age in zip(varname_clean, varname_with_age)]
+consumer_type = [info[-1] for info in test]
+car_type = [info[-3] if is_evs[i] else info[-2] for i, info in enumerate(test)]
+car_age = [info[-2] if is_evs[i] else 'all' for i, info in enumerate(test)]
+
+# 
+new_index = pd.MultiIndex.from_arrays(
+    [var_type, varname_final, consumer_type, car_type, car_age, list(runs.index.get_level_values(1)), list(runs.index.get_level_values(2))],
+    names = ['vartype','varname', 'consumer_type', 'car_type', 'car_age',  runs.index.get_level_values(1).name, runs.index.get_level_values(2).name]
+)
+runs_to_store = runs.copy()
+runs_to_store.index = new_index
+
+runs.index = new_index
+
+# Renaming indexes
+group_on = ['vartype', 'varname', 'consumer_type', 'car_type', 'car_age', "Nbar"]
+means = runs.groupby(group_on, sort=False).mean()
 means = means.rename(columns={"Estimates": "mean", 'se': 'MASE'})
 list_of_Nbars = Nbars.tolist()
 
 tuples = list(zip(["Sample size"] * len(list_of_Nbars), list_of_Nbars))
 idx = pd.IndexSlice
 for i, tuple in enumerate(tuples):
-    means.loc[idx[tuple], "mean"] = list_of_Nbars[i]
+    means.loc[idx[tuple[0], 0, 0, 0, 0, tuple[1]], "mean"] = list_of_Nbars[i]
 
 tuples = list(zip(["MC iterations"] * len(list_of_Nbars), list_of_Nbars))
 idx = pd.IndexSlice
 for i, tuple in enumerate(tuples):
-    means.loc[idx[tuple], "mean"] = mc_options['mc_iter']
+    means.loc[idx[tuple[0], 0, 0, 0, 0, tuple[1]], "mean"] = mc_options['mc_iter']
 
 # long table
 if 'MASE' in means.columns:
     runs_long=runs[['Estimates']]
 
-stds = runs_long.groupby(["coefficients", "Nbars"], sort=False).std()
+stds = runs_long.groupby(group_on, sort=False).std()
 stds = stds.rename(columns={"Estimates": "std"})
-p_025 = runs_long.groupby(["coefficients", "Nbars"], sort=False).quantile(0.025)
+p_025 = runs_long.groupby(group_on, sort=False).quantile(0.025)
 p_025 = p_025.rename(columns={"Estimates": "p2.5"})
-p_975 = runs_long.groupby(["coefficients", "Nbars"], sort=False).quantile(0.975)
+p_975 = runs_long.groupby(group_on, sort=False).quantile(0.975)
 p_975 = p_975.rename(columns={"Estimates": "p97.5"})
 # stats = pd.concat([true_est, means, stds, p_025, p_975], axis=1)
 stats = pd.concat([means, stds, p_025, p_975], axis=1)
 #
 # # adding true values:
-varnames = stats.index.get_level_values('coefficients').to_list()
-tuples = list(zip(varnames, ["true values"] * len(varnames)))
+
 true_params_df = true_params.reset_index()
-true_params_df['Nbars'] = 'true value'
-true_params_df = true_params_df.set_index(['coefficients', 'Nbars'])
+true_params_df['Nbar'] = 'true value'
+
+# remapping coefficients 
+varnames=true_params.index.get_level_values(0).to_list()
+
+test=[re.findall(r'\d+|all', varname) for varname in varnames]
+is_evs = [re.findall(r'ev_', varname) == ['ev_'] for varname in varnames]
+
+var_type = ['ev' if is_ev else 'flow' for is_ev in is_evs]
+varname_clean = [re.match(r'^(.*?)(\d+|all)', varname).group(1) for varname in varnames]
+varname_with_age = [re.search(r'(_age_(sq|even)|_age)', varname).group(0) if re.search(r'(_age_|_age(sq|even))', varname) else '' for varname in varnames]
+varname_final = [varname[0:-1] + age for varname, age in zip(varname_clean, varname_with_age)]
+consumer_type = [info[-1] for info in test]
+car_type = [info[-3] if is_evs[i] else info[-2] for i, info in enumerate(test)]
+car_age = [info[-2] if is_evs[i] else 'all' for i, info in enumerate(test)]
+
+# 
+new_index = pd.MultiIndex.from_arrays(
+    [var_type, varname_final, consumer_type, car_type, car_age],
+    names = ['vartype','varname', 'consumer_type', 'car_type', 'car_age']
+)
+true_params_df.index = new_index
+true_params_df = true_params_df.set_index('Nbar', append=True)
+
+
 true_params_df = true_params_df.rename(columns={'true values': 'mean'})
 true_params_df = true_params_df[['mean']]
 stats = pd.concat([stats, true_params_df], axis=0)
@@ -226,20 +271,20 @@ stats = pd.concat([stats, true_params_df], axis=0)
 #)
 #stats = stats.sort_index(level=0)
 
-stats = stats.sort_index(
-    level=["coefficients", "Nbars"], ascending=[True, True]
-).reset_index()
+# stats = stats.sort_index(
+#     level=["Nbar"], ascending=[True, True]
+# ).reset_index()
 
 
 stats.round(4).to_latex(out_dir + "mc_table_long.tex", escape=False)
 stats.round(4).to_markdown(out_dir + "mc_table_long.md")
 # short table:
 largest_Nbar = int(Nbars.max())
-runs_largest = runs.loc[pd.IndexSlice[:, largest_Nbar, :], :].reset_index(
-    level="Nbars", drop=True
+runs_largest = runs.loc[pd.IndexSlice[:,:, :, :,:, largest_Nbar, :], :].reset_index(
+    level="Nbar", drop=True
 )
-
-means = runs_largest.groupby(["coefficients"], sort=False).mean()
+group_on = ['vartype', 'varname', 'consumer_type', 'car_type', 'car_age']
+means = runs_largest.groupby(group_on, sort=False).mean()
 means = means.rename(columns={"Estimates": "mean", 'se': 'MASE'})
 
 means.loc["Sample size", "mean"] = largest_Nbar
@@ -249,17 +294,21 @@ means.loc["MC iterations", "mean"] = mc_options['mc_iter']
 if 'MASE' in means.columns:
     runs_largest=runs_largest[['Estimates']]
 
-stds = runs_largest.groupby(["coefficients"], sort=False).std()
-stds = stds.rename(columns={"Estimates": "std"})
-p_025 = runs_largest.groupby(["coefficients"], sort=False).quantile(0.025)
+stds = runs_largest.groupby(group_on, sort=False).std()
+stds = stds.rename(columns={"Estimates": "MCSE"})
+p_025 = runs_largest.groupby(group_on, sort=False).quantile(0.025)
 p_025 = p_025.rename(columns={"Estimates": "p2.5"})
-p_975 = runs_largest.groupby(["coefficients"], sort=False).quantile(0.975)
+p_975 = runs_largest.groupby(group_on, sort=False).quantile(0.975)
 p_975 = p_975.rename(columns={"Estimates": "p97.5"})
-stats = pd.concat([true_params, means, stds, p_025, p_975], axis=1)
 
-stats.round(4).to_latex(out_dir + "mc_table.tex", escape=False)
-stats.round(4).to_markdown(out_dir + "mc_table.md")
+# adding true values
+true_params_df=true_params_df.reset_index().set_index(group_on)[['mean']].rename(columns={'mean': 'true value'})
+stats=true_params_df.join(pd.concat([means, stds, p_025, p_975], axis=1), how='outer')
+breakpoint()
+stats.reset_index().round(4).to_latex(out_dir + "mc_table.tex", escape=False)
+stats.reset_index().round(4).to_markdown(out_dir + "mc_table.md")
 
+stats.to_pickle(out_dir + 'mc.pkl')
 
 # plotting errors
 

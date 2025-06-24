@@ -374,65 +374,9 @@ def get_setup_paper_25():
     "mum": (num_consumers, 1),
     "buying": (num_consumers, 1),
     #"buying": None,
-    "scrap_correction": (num_consumers, 1),
-    "u_0": (num_consumers, 1),
-    "u_a": (num_consumers, 1),
-    "u_a_sq": None,
-    "u_a_even": None,
-    }
-
-
-def get_setup_paper_25(): 
-    num_consumers = 2
-    num_car_types = 4
-
-    chunk_size = 25_000
-    mc_iter = 1000
-    N_mc = 25_000 #5_000_000 
-    sample_iter = N_mc * mc_iter // chunk_size
-    # Estimation_size controls the sample size used in the estimation
-    estimation_size = N_mc  # 1000000
-    
-    sim_option_checks(estimation_size, chunk_size, N_mc, sample_iter)
-
-    sim_options = {
-        "n_agents": chunk_size * sample_iter,  # 226675,
-        "n_periods": 1,
-        "seed": 500,
-        "chunk_size": chunk_size,
-        "estimation_size": estimation_size,
-        "use_count_data": True,
-    }
-
-    mc_options = {
-    'Nbars': np.array([estimation_size]),
-    'mc_iter': mc_iter, 
-    }
-    
-    params_true=loadmat('./analysis/data/model_inputs/small_model_scrap_and_price_from_eqb/mp_mle_model.mat')
-    params_update = {
-        "p_fuel": [0.0],
-        "acc_0": [-100.0],
-        "mum": np.array([0.1, 0.2]), #np.array([x[0][0] for x in params_true['mum'].flatten()]) ,
-        "psych_transcost": np.array([7.0, 7.0]), #np.array([x[0][0] for x in params_true['psych_transcost'].flatten()]) + (np.arange(0,8)-num_consumers/2)/10,
-        'u_0': np.tile(np.array([x[0][0] for x in params_true['u_0'][0,:]]), (num_consumers, 1)),
-        'u_a': np.tile(np.array([x[0][0] for x in params_true['u_a'][0,:]]), (num_consumers, 1))
-    }
-
-    options_update = {
-        "n_consumer_types": num_consumers, # Redundant
-        "n_car_types": num_car_types,
-        "max_age_of_car_types": [25],
-        #"tw": [0.5, 0.5],
-    }
-
-    specification = {
-    "mum": (num_consumers, 1),
-    "buying": (num_consumers, 1),
-    #"buying": None,
-    "scrap_correction": (num_consumers, 1),
-    "u_0": (num_consumers, 1),
-    "u_a": (num_consumers, 1),
+    "scrap_correction": (1, 1),
+    "u_0": (1, num_car_types),
+    "u_a": (1, num_car_types),
     "u_a_sq": None,
     "u_a_even": None,
     }
@@ -468,7 +412,7 @@ def get_setup_paper_250():
     }
     
     params_true=loadmat('./analysis/data/model_inputs/small_model_scrap_and_price_from_eqb/mp_mle_model.mat')
-    breakpoint()
+
     params_update = {
         "p_fuel": [0.0],
         "acc_0": [-100.0],
@@ -489,7 +433,7 @@ def get_setup_paper_250():
     "mum": (num_consumers, 1),
     "buying": (num_consumers, 1),
     #"buying": None,
-    "scrap_correction": (num_consumers, 1),
+    "scrap_correction": (1, 1),
     "u_0": (1, num_car_types),
     "u_a": (1, num_car_types),
     "u_a_sq": None,
