@@ -190,10 +190,19 @@ new_index = pd.MultiIndex.from_arrays(
     [var_type, varname_final, consumer_type, car_type, car_age, list(runs.index.get_level_values(1)), list(runs.index.get_level_values(2))],
     names = ['vartype','varname', 'consumer_type', 'car_type', 'car_age',  runs.index.get_level_values(1).name, runs.index.get_level_values(2).name]
 )
-runs_to_store = runs.copy()
-runs_to_store.index = new_index
 
 runs.index = new_index
+
+runs_raw = runs.copy()
+runs_raw.to_pickle(out_dir + 'runs_raw.pkl')
+
+# Removing the iterations where the flow parameters went nuts: 
+idx = pd.IndexSlice
+obs_to_drop = runs[runs.se.isna()].index
+#obs_to_drop = obs_to_drop[obs_to_drop.get_level_values(0) == 'flow']
+runs.drop(index=obs_to_drop, inplace=True)
+
+nflows_dropped = obs_to_drop.shape[0]
 
 # Renaming indexes
 group_on = ['vartype', 'varname', 'consumer_type', 'car_type', 'car_age', "Nbar"]
@@ -304,7 +313,10 @@ p_975 = p_975.rename(columns={"Estimates": "p97.5"})
 # adding true values
 true_params_df=true_params_df.reset_index().set_index(group_on)[['mean']].rename(columns={'mean': 'true value'})
 stats=true_params_df.join(pd.concat([means, stds, p_025, p_975], axis=1), how='outer')
-breakpoint()
+
+# Finally I add the number of flow estimates that was dropped from estimation
+stats.loc[('dropped flows', '', '', '',''),'true value'] = nflows_dropped
+
 stats.reset_index().round(4).to_latex(out_dir + "mc_table.tex", escape=False)
 stats.reset_index().round(4).to_markdown(out_dir + "mc_table.md")
 
