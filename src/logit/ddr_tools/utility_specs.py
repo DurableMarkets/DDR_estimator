@@ -33,21 +33,74 @@ def create_buying(
         columns=buying_cols_flatten,
     )
     helper_df["d_own"] = decision_space[decisions, 0]
-    helper_df["dum_buy"] = helper_df["d_own"] == 2 # buy car
+    helper_df["dum_buy"] = -(helper_df["d_own"] == 2).astype(int) # buy car
 
 
     # Adding buying
     nconsumers, ncartypes = specification["buying"]
     if (nconsumers == 1) & (ncartypes == 1):
-        X.loc[:, buying_cols] = helper_df["dum_buy"].values
+        X.loc[:, buying_cols[0]] = helper_df["dum_buy"].values
     elif (nconsumers > 1) & (ncartypes == 1):
         for ntype in range(0, nconsumers):
-            X.loc[pd.IndexSlice[ntype, :, :], buying_cols[ntype]] = helper_df.loc[pd.IndexSlice[ntype, :, :],'dum_buy'].values
+            X.loc[pd.IndexSlice[ntype, :, :], buying_cols[ntype]] = helper_df.loc[pd.IndexSlice[ntype, :, :],'dum_buy']
     else:
         raise NotImplementedError(
             "transactions costs are only allowed to vary with consumer type, not car type."
         )
     return X, buying_cols_flatten
+
+def create_buying_nocar(
+    main_df,
+    model_struct_arrays,
+    params,
+    options,
+    specification,
+):
+    if specification["buying_nocar"] is None:
+        return None, None
+    
+    decision_space = model_struct_arrays["decision_space"]
+    state_space = model_struct_arrays["state_space"]
+
+    # Constructing the columns
+    buying_cols, buying_cols_flatten, cols_looper = utility_helpers.construct_utility_colnames(
+        "buying_nocar", "buying_nocar_{}_{}", specification, options
+    )
+    decisions = main_df.index.get_level_values("decision").values 
+    states = main_df.index.get_level_values("state").values 
+
+    helper_df = pd.DataFrame(
+        np.nan,
+        index=main_df.index,
+        columns=buying_cols_flatten,
+    )
+
+    X = pd.DataFrame(
+        np.nan,
+        index=main_df.index,
+        columns=buying_cols_flatten,
+    )
+
+    helper_df["d_own"] = decision_space[decisions, 0]
+    helper_df["dum_buy"] = helper_df["d_own"] == 2 # buy car
+    helper_df['s_nocar'] = state_space[states,0] == 0 # has no car
+    helper_df['buying_nocar'] = -helper_df['d_own'] * helper_df['s_nocar']
+
+
+
+    # Adding buying_nocar
+    nconsumers, ncartypes = specification["buying_nocar"]
+    if (nconsumers == 1) & (ncartypes == 1):
+        X.loc[:, buying_cols[0]] = helper_df["buying_nocar"].values
+    elif (nconsumers > 1) & (ncartypes == 1):
+        for ntype in range(0, nconsumers):
+            X.loc[pd.IndexSlice[ntype, :, :], buying_cols[ntype]] = helper_df.loc[pd.IndexSlice[ntype, :, :],'buying_nocar'].values
+    else:
+        raise NotImplementedError(
+            "transactions costs are only allowed to vary with consumer type, not car type."
+        )
+    return X, buying_cols_flatten
+
 
 def create_u_0(
     main_df,
@@ -174,7 +227,7 @@ def create_u_a_even(
         
     # Constructing the columns
     car_type_cols, car_type_cols_flatten, car_type_cols_looper = utility_helpers.construct_utility_colnames(
-        "u_a", "car_type_{}_{}", specification, options
+        "u_a_even", "car_type_{}_x_age_even_{}", specification, options
     )
 
     # u_0 dummies

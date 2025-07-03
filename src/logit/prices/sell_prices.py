@@ -143,7 +143,7 @@ def expected_scrap_price(
             ), f"price_idx should be non-negative but is {price_idx}"
             Ep = (
                 prob_scrap[s_type - 1, s_age - 1] * pscrap
-                + (1.0 - prob_scrap[s_type - 1, s_age - 1]) * prices_u[price_idx]
+                + (1.0 - prob_scrap[s_type - 1, s_age - 1]) * (prices_u[price_idx])
             )
     else:
         Ep = 0.0

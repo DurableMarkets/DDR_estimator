@@ -15,7 +15,9 @@ def get_model_specs():
         params_update, options_update, specification, pricing_options, scrap_options, kwargs = get_setup_2(setup_name)
     elif setup_name == 'setup_jpe':
         params_update, options_update, specification, pricing_options, scrap_options, kwargs = get_setup_jpe(setup_name)
-
+    elif setup_name == 'setup_jpe_full_replication':
+        params_update, options_update, specification, pricing_options, scrap_options, kwargs = get_setup_jpe_full_replication(setup_name)
+        
     else: 
         raise ValueError(f"Invalid setup name: {setup_name}. Please choose a valid JPE setup name.")
 
@@ -61,6 +63,7 @@ def get_setup_1(setup_name):
     specification = {
     "mum": (num_consumers, 1),
     "buying": (1, 1),
+    "buying_nocar": None,
     #"buying": None,
     "scrap_correction": (1, 1),
     "u_0": (1, num_car_types),
@@ -202,6 +205,7 @@ def get_setup_jpe(setup_name):
     specification = {
     "mum": (num_consumers, 1),
     "buying": (1, 1),
+    "buying_nocar": None,
     #"buying": None,
     "scrap_correction": (1, 1),
     "u_0": (num_consumers, num_car_types),
@@ -252,8 +256,8 @@ def get_setup_jpe_full_replication(setup_name):
     "ptranscost": 0.0,
     # "mum2sigma": 0.5,
     #"pscrap": np.array([6.1989, 5.2565, 9.3461, 8.7610]),
-    "acc_0": np.array([-4.6363, -4.6363, -4.6363, -4.6363]),
-    "acc_a": np.array([0.0, 0.0, 0.0, 0.0]),
+    "acc_0": np.array([-5.5830, -5.9985, -5.6707, -5.7370]),
+    "acc_a": np.array([0.1720, 0.2132, 0.2007, 0.1967]),
     "acc_even": np.array([0.0, 0.0, 0.0, 0.0]),
     }
 
@@ -267,13 +271,14 @@ def get_setup_jpe_full_replication(setup_name):
     # This specification is quite sparse compared to the one in the paper. 
     specification = {
     "mum": (num_consumers, 1),
-    "buying": (1, 1),
+    "buying": (num_consumers, 1),
+    "buying_nocar": (num_consumers, 1),
     #"buying": None,
     "scrap_correction": (1, 1),
     "u_0": (num_consumers, num_car_types),
     "u_a": (num_consumers, num_car_types),
     "u_a_sq": None,
-    "u_a_even": None,
+    "u_a_even": (num_consumers, num_car_types),
     }
     
     # additional options that control output folders, choice of years to estimate on and the max 
@@ -284,7 +289,7 @@ def get_setup_jpe_full_replication(setup_name):
     'folders': {'in_data': './analysis/data/8x4/',
                 'out_data':lambda setup_name: f'./analysis/data/{setup_name}/processed_data/',
                 'out_results': lambda setup_name: f'./output/replication/{setup_name}/results/',
-                'in_comparison_results': './analysis/data/model_inputs/large_model_scrap_and_price_from_eqb/',
+                'in_comparison_results': './analysis/data/model_inputs/JPE_replication/',
                 },
     'max_age_car': max_age_car,
     }
@@ -293,15 +298,29 @@ def get_setup_jpe_full_replication(setup_name):
         'how': 'model_moments',
         'new_prices': np.array([174.9022438 , 144.55127776, 299.45192115, 253.39713226]),
         'scrap_prices': np.array([6.1989, 5.2565, 9.3461, 8.7610]),
-        'data_source_path': './analysis/data/model_inputs/large_model_scrap_and_price_from_eqb/used_car_prices_model.csv',
+        'data_source_path': './analysis/data/model_inputs/JPE_replication/used_car_prices_model.csv',
+        'out_path': f'./analysis/data/{setup_name}/processed_data/',
+    }
+    # if model moments
+    scrap_options = {
+        'how': 'model_moments',
+        'data_source_path': './analysis/data/model_inputs/JPE_replication/scrap_probabilities_model.csv',
         'out_path': f'./analysis/data/{setup_name}/processed_data/',
     }
 
-    scrap_options = {
-        'how': 'model_moments',
-        'data_source_path': './analysis/data/model_inputs/large_model_scrap_and_price_from_eqb/scrap_probabilities_model.csv',
-        'out_path': f'./analysis/data/{setup_name}/processed_data/',
-    }
+    # if scrap data
+    # scrap_options = {
+    #     'how': 'scrap_data',
+    #     'data_source_path': './analysis/data/model_inputs/JPE_replication/scrap_probabilities_model.csv',
+    #     'folders': {'in_data': './analysis/data/8x4/',
+    #         'out_data': f'./analysis/data/{setup_name}/processed_data/',
+    #         #'out_results': lambda setup_name: f'./output/replication/{setup_name}/results/',
+    #         #'in_comparison_results': './analysis/data/model_inputs/small_model_scrap_and_price_from_eqb/',
+    #         },
+    #     'out_path': f'./analysis/data/{setup_name}/processed_data/',
+    #     'years': np.arange(1996, 2009).astype(str).tolist(),
+
+    # }
 
     return params_update, options_update, specification, pricing_options, scrap_options, kwargs
 

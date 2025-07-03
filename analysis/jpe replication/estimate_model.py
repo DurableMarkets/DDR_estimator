@@ -16,12 +16,12 @@ import logit.ddr_tools.main_index as main_index
 import logit.ddr_tools.dependent_vars as dependent_vars
 import logit.ddr_tools.regressors as regressors
 import logit.prices.prices as dep_prices
-import logit.estimators.pwls as pwls
-import logit.estimators.npwls as npwls
-import logit.estimators.nbinls as nbinls
-import logit.estimators.nls as nls
-import logit.estimators.optimal_wls as owls
-
+#import logit.estimators.pwls as pwls
+#import logit.estimators.npwls as npwls
+#import logit.estimators.nbinls as nbinls
+#import logit.estimators.nls as nls
+#import logit.estimators.optimal_wls as owls
+import logit.estimators.npqqwls as npqqwls
 
 from data_setups.jpe_options import get_model_specs
 from set_path import get_paths
@@ -41,9 +41,9 @@ params_update, options_update, specification, pricing_options, scrap_options, fo
 jpe_model = eqb.load_models("jpe_model")
 
 ### CAN BE REMOVED ###
-from scipy import io 
-t=io.loadmat("./analysis/data/model_inputs/large_model_scrap_and_price_from_eqb/" + 'mp_mle_model.mat')
-t=pd.read_pickle("./analysis/data/setup_jpe/processed_data/" + 'est_params_jpe.pkl')
+#from scipy import io 
+#t=io.loadmat("./analysis/data/model_inputs/large_model_scrap_and_price_from_eqb/" + 'mp_mle_model.mat')
+#t=pd.read_pickle("./analysis/data/setup_jpe/processed_data/" + 'est_params_jpe.pkl')
 #### ##### ##### ####
 breakpoint()
 params, options = jpe_model["update_params_and_options"](
@@ -103,19 +103,18 @@ X_dep, _ = dep_prices.create_data_dependent_regressors(
 X = dependent_vars.combine_regressors(X_indep, X_dep, model_specification)
 cfps, counts = dependent_vars.calculate_cfps_from_df(choices.reset_index())
 
-est, est_post = npwls.owls_regression_mc(
+est, est_post = npqqwls.owls_regression_mc(
     ccps=cfps, 
     counts=counts, 
     X=X, 
     model_specification=model_specification
 )
 
-
 # Next compare EV dummies from both models
 # Load model EV dummies:
-visuals_and_tables.create_ev_plots(est, folders)
+visuals_and_tables.create_ev_plots(est, folders, options)
 
-visuals_and_tables.create_params_table(est, folders)
+visuals_and_tables.create_params_table(est, folders, model_struct_arrays, options)
 # Compaere estimates
 
 

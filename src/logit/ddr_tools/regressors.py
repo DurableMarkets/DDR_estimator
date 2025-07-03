@@ -29,6 +29,15 @@ def create_data_independent_regressors(
         specification,
     )
 
+    buying_nocar, _ = utility_specs.create_buying_nocar(
+        main_df,
+        model_struct_arrays,
+        params,
+        options,
+        specification,
+    )
+
+
     u_0, _ = utility_specs.create_u_0(
         main_df,
         model_struct_arrays,
@@ -62,7 +71,7 @@ def create_data_independent_regressors(
     )
 
     # Combine all the flow variables
-    X_indep = pd.concat([buying, u_0, u_a, u_a_sq, u_a_even, iota], axis=1)
+    X_indep = pd.concat([buying, buying_nocar, u_0, u_a, u_a_sq, u_a_even, iota], axis=1)
 
     return X_indep, model_specification
 
@@ -76,6 +85,11 @@ def create_model_specification(specification, options, model_struct_arrays):
     # psych_trans_cost
     _, buying_cols, _ = utility_helpers.construct_utility_colnames(
         "buying", "buying_{}_{}", specification, options
+    )
+
+    # psych_trans_cost_nocar
+    _, buying_cols_nocar, _ = utility_helpers.construct_utility_colnames(
+        "buying_nocar", "buying_nocar_{}_{}", specification, options
     )
 
     # scrap_correction
@@ -109,6 +123,7 @@ def create_model_specification(specification, options, model_struct_arrays):
     model_specification = (
         mum_cols
         + buying_cols
+        + buying_cols_nocar
         + scrap_correction_cols
         + u_0_cols
         + u_a_cols

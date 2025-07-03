@@ -477,7 +477,9 @@ def get_setup_paper_2500():
         "mum": np.array([0.1, 0.2]), #np.array([x[0][0] for x in params_true['mum'].flatten()]) ,
         "psych_transcost": np.array([7.0, 7.0]), #np.array([x[0][0] for x in params_true['psych_transcost'].flatten()]) + (np.arange(0,8)-num_consumers/2)/10,
         'u_0': np.tile(np.array([x[0][0] for x in params_true['u_0'][0,:]]), (num_consumers, 1)),
-        'u_a': np.tile(np.array([x[0][0] for x in params_true['u_a'][0,:]]), (num_consumers, 1))
+        'u_a': np.tile(np.array([x[0][0] for x in params_true['u_a'][0,:]]), (num_consumers, 1)),
+        'tc_sale': [-1.5760],
+
     }
 
     options_update = {
