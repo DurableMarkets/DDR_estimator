@@ -105,6 +105,7 @@ def calculate_weights(ccps, counts):
     return weight_blocks
 
 def calculate_asymptotic_var(ccps, counts, X, xwx): 
-        # # removing any rank deficiencies   
+        # # removing any rank deficiencies  
+        # FIXTHIS:  This is wrong USE SANDWICH  
         xwx_inv = np.linalg.inv(xwx)
-        return xwx_inv     
+        return xwx_inv  
