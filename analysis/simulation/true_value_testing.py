@@ -5,7 +5,7 @@ import logit.monte_carlo_tools.misc_tools as misc_tools
 import logit.monte_carlo_tools.monte_carlo_tools as monte_carlo_tools
 import logit.ddr_tools.dependent_vars as dependent_vars
 import logit.prices.prices as prices
-import logit.estimators.npqqwls as pwls
+import logit.estimators.npmqqwls as pwls
 import jax.numpy as jnp
 import pandas as pd
 import matplotlib.pyplot as plt

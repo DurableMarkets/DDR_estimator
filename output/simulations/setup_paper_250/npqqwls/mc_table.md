@@ -249,3 +249,4 @@
 | 246 | flow          | price             | 0               | all        | all       |       0.1    |      0.095  |   0.0012 |   0.001  |   0.0932 |   0.0969 |
 | 247 | flow          | price             | 1               | all        | all       |       0.2    |      0.1888 |   0.0017 |   0.0014 |   0.1861 |   0.1916 |
 | 248 | flow          | scrap_correction  | all             | all        | all       |       0.5    |      0.7642 |   0.0413 |   0.0399 |   0.6872 |   0.8386 |
+| 249 | dropped flows |                   |                 |            |           |       0      |    nan      | nan      | nan      | nan      | nan      |

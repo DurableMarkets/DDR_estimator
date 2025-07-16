@@ -29,6 +29,7 @@ analysis/logit/monte_carlo/sim_data/*
 *.csv
 !analysis/data/8x4_eqb/*.csv
 !analysis/data/model_inputs/*/*.csv
+#analysis/data/model_inputs/JPE_replication/*.mat
 
 intermediate_params.pkl
 
@@ -51,3 +52,5 @@ model_solution*.pkl
 sim_data/data.pkl
 sim_data/data.pkl
 .gitignore
+
+!analysis/data/model_inputs/JPE_replication/*.*

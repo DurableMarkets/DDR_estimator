@@ -99,7 +99,7 @@ def calculate_weights(ccps, counts):
         K = P.shape[0]
         N_is = N.loc[N.index[i]]
 
-        A = N_is/N_all*(np.diag(P) + np.c_[P] @ np.c_[P].T)
+        A = N_is/N_all*(np.diag(P) - np.c_[P] @ np.c_[P].T)
         weight_blocks.append(A)
 
     return weight_blocks

@@ -90,6 +90,7 @@ def get_setup_1():
     specification = {
     "mum": (num_consumers, 1),
     "buying": (num_consumers, 1),
+    'buying_nocar': None,
     #"buying": None,
     "scrap_correction": (num_consumers, 1),
     "u_0": (num_consumers, num_car_types),

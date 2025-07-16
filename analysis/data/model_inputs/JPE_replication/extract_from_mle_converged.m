@@ -1,6 +1,8 @@
 
 %% 
-sol_mle=load('mle_converged.mat');
+mle_file=load('mle_converged.mat');
+sol_mle=mle_file.sol_mle;
+mp_mle = mle_file.mp_mle;
 
 
 %% save output for later: 
@@ -13,12 +15,14 @@ csvwrite('used_car_prices_model.csv', sol_mle.p)
 
 % EV terms
 csvwrite('ev_terms_model.csv', cell2mat(sol_mle.ev_tau'))
-
+_
 % estimates
 save('mp_mle_model.mat', '-struct', 'mp_mle');
 
 %
-to_export = ['acc_0', 'acc_a', 'sigma_s', 'mum', 'psych_transcost', 'psych_transcost_nocar', 'tc_sale', 'tc_sale_even', 'u_0', 'u_a']
+to_export = {'acc_0', 'acc_a', 'sigma_s', 'mum', 'psych_transcost', 'psych_transcost_nocar', 'tc_sale', 'tc_sale_even', 'u_0', 'u_a'}
 for i = 1:length(to_export)
-    save('mp_mle_model.mat', '-struct', mp_mle.(to_export{i}));
+    filename = [to_export{i} '.mat'] 
+    to_store = mp_mle.(to_export{i})
+    save(char(filename), "to_store");
 end
