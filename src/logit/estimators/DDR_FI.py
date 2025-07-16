@@ -3,8 +3,7 @@ from pandas import IndexSlice as idx
 import jax.numpy as jnp
 import pandas as pd
 import jax
-from itertools import compress
-
+from logit.DDR_tools.iota_space import create_iota_space
 jax.config.update("jax_enable_x64", True)
 
 def owls_regression_mc(X, ccps, counts, model_specification):
@@ -22,12 +21,13 @@ def owls_regression_mc(X, ccps, counts, model_specification):
 
     X = X[model_specification].loc[I]
 
+    A, B = create_A_B_E_matrices(X, ccps=ccps)
+    Xm=create_miessi_regressors(A=A,B=B)
+
+
     logY = np.log(ccps.values.flatten())
 
-    B, se, est_post, rank_deficiency_mask = estimate_owls(logY, X, ccps, counts)
-
-    # remove rank deficient varnames
-    model_specification = list(compress(model_specification, rank_deficiency_mask))
+    B, se, est_post = estimate_owls(logY, X, ccps, counts)
     if se is not None:
         est = pd.DataFrame(np.array([B,se]).T, index=[model_specification], columns=["Coefficient", 'se'])
     else:
@@ -35,20 +35,44 @@ def owls_regression_mc(X, ccps, counts, model_specification):
 
     return est, est_post
 
+def create_A_B_E_matrices(self, X, ccps):
+    E = - np.log(ccps)
+    F = create_iota_space(feasible_idx, model_struct_arrays, model_funcs, params, options)
+    
+    Fu = self.model.statetransition_unconditional(F, ccps)
+    denom = np.eye(self.model.n) - self.model.beta * Fu # (n, n)
+    this_u = (ccps[:,:,None] * X).sum(axis=1) # (n, K) [ccps is broadcast over 3rd dimension (k, regressors)]
+    this_E = (ccps * E).sum(axis=1) # (n, )
+
+    A = np.linalg.solve(denom, this_u) # (n, )
+    
+    B = np.linalg.solve(denom, this_E) # (n, )
+
+    return A, B
+
+def create_miessi_regressors(self, A, B):
+    # Create flow utility regressors
+    X=self.create_regressors()
+    Yoda  = self.create_F_space()
+    Xm=X + Yoda @ A
+    
+    return Xm
+
+
 
 def estimate_owls(Y, X, ccps, counts):
     """This function estimates the parameters of the DDR regression using the optimal wls weight matrix. 
 
     """
     # Index for zero share rows
-    Y = np.nan_to_num(Y, nan=0.0)
+    Y = jnp.nan_to_num(Y, nan=0.0)
     X = X.astype(float)
 
     # calc the weights
     weight_blocks = calculate_weights(ccps, counts)
     X_indices = X.index.droplevel([level for level in X.index.names if level not in ["consumer_type", "state"]]).unique()
 
-    xw = np.concatenate(
+    xw = jnp.concatenate(
         [X.loc[X_indices.get_level_values('consumer_type')[i],:,X_indices.get_level_values('state')[i], :, :].values.T 
         @ weight_blocks[i] for i in range(len(weight_blocks))]
     ,axis=1)
@@ -56,20 +80,14 @@ def estimate_owls(Y, X, ccps, counts):
     xwx = xw @ X.values
     xwy = xw @ Y
 
-    # Remove any variables that evaluate to zero 
-    rank_deficiency_mask = xwx.sum(axis=1) != 0.0
-    xwx=xwx[np.ix_(rank_deficiency_mask, rank_deficiency_mask)]
-    xwy=xwy[rank_deficiency_mask]
-
     # WLS regression
     g0 = np.linalg.solve(xwx, xwy)
 
     # Compute Avar
-    avar=calculate_asymptotic_var(ccps, counts, X.loc[:, rank_deficiency_mask], xwx)
+    avar=calculate_asymptotic_var(ccps, counts, X, xwx)
     se=np.sqrt(np.diag(avar)/counts.sum())
 
-    # Some extra diagnostics
-    preds = X.values[:, rank_deficiency_mask] @ g0
+    preds = X.values @ g0
     residuals = Y - preds
     est_post=pd.DataFrame(
         data={'preds':preds,
@@ -81,7 +99,7 @@ def estimate_owls(Y, X, ccps, counts):
               index=X.index
     )
 
-    return g0, se, est_post, rank_deficiency_mask
+    return g0, se, est_post
     
 def calculate_weights(ccps, counts):
     

@@ -22,12 +22,12 @@ def get_model_specs(output_dir_func):
         sim_options, mc_options, params_update, options_update, specification = get_setup_0()
     elif setup_name == 'setup_ddr_paper':
         sim_options, mc_options, params_update, options_update, specification = get_setup_ddr_paper()
-    elif setup_name == 'setup_paper_2500': 
-        sim_options, mc_options, params_update, options_update, specification = get_setup_paper_2500()
+    elif setup_name == 'setup_paper_1250': 
+        sim_options, mc_options, params_update, options_update, specification = get_setup_paper_1250()
     elif setup_name == 'setup_paper_250': 
         sim_options, mc_options, params_update, options_update, specification = get_setup_paper_250()
-    elif setup_name == 'setup_paper_25': 
-        sim_options, mc_options, params_update, options_update, specification = get_setup_paper_25()
+    elif setup_name == 'setup_paper_50': 
+        sim_options, mc_options, params_update, options_update, specification = get_setup_paper_50()
 
     else: 
         raise ValueError("Invalid setup name. Please choose a valid setup name.")
@@ -327,12 +327,12 @@ def get_setup_0():
     return sim_options, mc_options, params_update, options_update, specification
 
 
-def get_setup_paper_25(): 
+def get_setup_paper_50(): 
     num_consumers = 2
     num_car_types = 4
 
     chunk_size = 25_000
-    mc_iter = 1000
+    mc_iter = 10_000
     N_mc = 50_000 #5_000_000 
     sample_iter = N_mc * mc_iter // chunk_size
     # Estimation_size controls the sample size used in the estimation
@@ -360,8 +360,8 @@ def get_setup_paper_25():
         "acc_0": [-100.0],
         "mum": np.array([0.1, 0.2]), #np.array([x[0][0] for x in params_true['mum'].flatten()]) ,
         "psych_transcost": np.array([7.0, 7.0]), #np.array([x[0][0] for x in params_true['psych_transcost'].flatten()]) + (np.arange(0,8)-num_consumers/2)/10,
-        'u_0': np.tile(np.array([x[0][0] for x in params_true['u_0'][0,:]]), (num_consumers, 1)),
-        'u_a': np.tile(np.array([x[0][0] for x in params_true['u_a'][0,:]]), (num_consumers, 1))
+        'u_0': np.round(np.tile(np.array([x[0][0] for x in params_true['u_0'][0,:]]), (num_consumers, 1)),1),
+        'u_a': np.round(np.tile(np.array([x[0][0] for x in params_true['u_a'][0,:]]), (num_consumers, 1)),1),
     }
 
     options_update = {
@@ -380,6 +380,7 @@ def get_setup_paper_25():
     "u_a": (1, num_car_types),
     "u_a_sq": None,
     "u_a_even": None,
+    'buying_nocar': None,
     }
 
     return sim_options, mc_options, params_update, options_update, specification
@@ -390,7 +391,7 @@ def get_setup_paper_250():
     num_car_types = 4
 
     chunk_size = 250_000
-    mc_iter = 1000
+    mc_iter = 10_000
     N_mc = 250_000 #5_000_000 
     sample_iter = N_mc * mc_iter // chunk_size
     # Estimation_size controls the sample size used in the estimation
@@ -419,8 +420,9 @@ def get_setup_paper_250():
         "acc_0": [-100.0],
         "mum": np.array([0.1, 0.2]), #np.array([x[0][0] for x in params_true['mum'].flatten()]) ,
         "psych_transcost": np.array([7.0, 7.0]), #np.array([x[0][0] for x in params_true['psych_transcost'].flatten()]) + (np.arange(0,8)-num_consumers/2)/10,
-        'u_0': np.tile(np.array([x[0][0] for x in params_true['u_0'][0,:]]), (num_consumers, 1)),
-        'u_a': np.tile(np.array([x[0][0] for x in params_true['u_a'][0,:]]), (num_consumers, 1))
+        'u_0': np.round(np.tile(np.array([x[0][0] for x in params_true['u_0'][0,:]]), (num_consumers, 1)),1),
+        'u_a': np.round(np.tile(np.array([x[0][0] for x in params_true['u_a'][0,:]]), (num_consumers, 1)),1),
+        'buying_nocar': None,
     }
 
     options_update = {
@@ -439,18 +441,19 @@ def get_setup_paper_250():
     "u_a": (1, num_car_types),
     "u_a_sq": None,
     "u_a_even": None,
+    'buying_nocar': None,
     }
 
     return sim_options, mc_options, params_update, options_update, specification
 
 
-def get_setup_paper_2500(): 
+def get_setup_paper_1250(): 
     num_consumers = 2
     num_car_types = 4
 
     chunk_size = 250_000
-    mc_iter = 1000
-    N_mc = 2_500_000 #5_000_000 
+    mc_iter = 10_000
+    N_mc = 750_000 #5_000_000 
     sample_iter = N_mc * mc_iter // chunk_size
     # Estimation_size controls the sample size used in the estimation
     estimation_size = N_mc  # 1000000
@@ -477,9 +480,9 @@ def get_setup_paper_2500():
         "acc_0": [-100.0],
         "mum": np.array([0.1, 0.2]), #np.array([x[0][0] for x in params_true['mum'].flatten()]) ,
         "psych_transcost": np.array([7.0, 7.0]), #np.array([x[0][0] for x in params_true['psych_transcost'].flatten()]) + (np.arange(0,8)-num_consumers/2)/10,
-        'u_0': np.tile(np.array([x[0][0] for x in params_true['u_0'][0,:]]), (num_consumers, 1)),
-        'u_a': np.tile(np.array([x[0][0] for x in params_true['u_a'][0,:]]), (num_consumers, 1)),
-        'tc_sale': [-1.5760],
+        'u_0': np.round(np.tile(np.array([x[0][0] for x in params_true['u_0'][0,:]]), (num_consumers, 1)),1),
+        'u_a': np.round(np.tile(np.array([x[0][0] for x in params_true['u_a'][0,:]]), (num_consumers, 1)),1),
+        #'tc_sale': [-1.5760],
 
     }
 
@@ -499,6 +502,7 @@ def get_setup_paper_2500():
     "u_a": (num_consumers, 1),
     "u_a_sq": None,
     "u_a_even": None,
+    'buying_nocar': None,
     }
 
     return sim_options, mc_options, params_update, options_update, specification
