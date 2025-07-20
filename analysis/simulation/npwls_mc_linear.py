@@ -304,7 +304,6 @@ p_975 = p_975.rename(columns={"Estimates": "p97.5"})
 # adding true values
 true_params_df=true_params_df.reset_index().set_index(group_on)[['mean']].rename(columns={'mean': 'true value'})
 stats=true_params_df.join(pd.concat([means, stds, p_025, p_975], axis=1), how='outer')
-breakpoint()
 stats.reset_index().round(4).to_latex(out_dir + "mc_table.tex", escape=False)
 stats.reset_index().round(4).to_markdown(out_dir + "mc_table.md")
 

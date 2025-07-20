@@ -332,7 +332,7 @@ def get_setup_paper_50():
     num_car_types = 4
 
     chunk_size = 25_000
-    mc_iter = 10_000
+    mc_iter = 5_000
     N_mc = 50_000 #5_000_000 
     sample_iter = N_mc * mc_iter // chunk_size
     # Estimation_size controls the sample size used in the estimation
@@ -391,7 +391,7 @@ def get_setup_paper_250():
     num_car_types = 4
 
     chunk_size = 250_000
-    mc_iter = 10_000
+    mc_iter = 5_000
     N_mc = 250_000 #5_000_000 
     sample_iter = N_mc * mc_iter // chunk_size
     # Estimation_size controls the sample size used in the estimation
