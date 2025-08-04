@@ -36,7 +36,7 @@ sim_options, mc_options, params_update, options_update, specification, out_dir=g
 params, options = jpe_model["update_params_and_options"](
     params=params_update, options=options_update
 )
-
+breakpoint()
 # Simulate data or load data
 (
     model_solution,
@@ -58,7 +58,7 @@ price_dict = misc_tools.construct_price_dict(
     params=params,
     options=options,
 )
-
+breakpoint()
 # Create main index used for constructing regressors
 main_df = main_index.create_main_df(
         model_struct_arrays=model_struct_arrays,

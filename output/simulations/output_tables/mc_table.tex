@@ -1,62 +1,34 @@
-\begin{tabular}{lllllllrrrr}
- &  &  &  &  &  & greek & true value & mean & MCSE & MASE \\
-N & vartype & varname & consumer_type & car_type & car_age &  &  &  &  &  \\
-\multirow[c]{29}{*}{25000} & \multirow[c]{29}{*}{flow} & \multirow[c]{2}{*}{buying} & 0 & all & all & $\rho_0$ & 7.000 & -5.785 & 0.075 & 0.052 \\
- &  &  & 1 & all & all & $\rho_1$ & 7.000 & -6.284 & 0.076 & 0.058 \\
- &  & \multirow[c]{12}{*}{car_type} & \multirow[c]{4}{*}{0} & 1 & all & $\theta_1^0$ & 2.983 & nan & nan & nan \\
- &  &  &  & 2 & all & $\theta_2^0$ & 2.514 & nan & nan & nan \\
- &  &  &  & 3 & all & $\theta_3^0$ & 4.649 & nan & nan & nan \\
- &  &  &  & 4 & all & $\theta_4^0$ & 4.080 & nan & nan & nan \\
- &  &  & \multirow[c]{4}{*}{1} & 1 & all & $\theta_1^0$ & 2.983 & nan & nan & nan \\
- &  &  &  & 2 & all & $\theta_2^0$ & 2.514 & nan & nan & nan \\
- &  &  &  & 3 & all & $\theta_3^0$ & 4.649 & nan & nan & nan \\
- &  &  &  & 4 & all & $\theta_4^0$ & 4.080 & nan & nan & nan \\
- &  &  & \multirow[c]{4}{*}{all} & 1 & all & $\theta_1^0$ & 2.983 & 3.359 & 0.970 & 0.238 \\
- &  &  &  & 2 & all & $\theta_2^0$ & 2.514 & 3.350 & 0.985 & 0.294 \\
- &  &  &  & 3 & all & $\theta_3^0$ & 4.649 & 3.925 & 0.118 & 0.112 \\
- &  &  &  & 4 & all & $\theta_4^0$ & 4.080 & 3.505 & 0.329 & 0.124 \\
- &  & \multirow[c]{12}{*}{car_type_age} & \multirow[c]{4}{*}{0} & 1 & all & $\theta_a_1^a$ & -0.146 & nan & nan & nan \\
- &  &  &  & 2 & all & $\theta_a_2^a$ & -0.115 & nan & nan & nan \\
- &  &  &  & 3 & all & $\theta_a_3^a$ & -0.224 & nan & nan & nan \\
- &  &  &  & 4 & all & $\theta_a_4^a$ & -0.197 & nan & nan & nan \\
- &  &  & \multirow[c]{4}{*}{1} & 1 & all & $\theta_a_1^a$ & -0.146 & nan & nan & nan \\
- &  &  &  & 2 & all & $\theta_a_2^a$ & -0.115 & nan & nan & nan \\
- &  &  &  & 3 & all & $\theta_a_3^a$ & -0.224 & nan & nan & nan \\
- &  &  &  & 4 & all & $\theta_a_4^a$ & -0.197 & nan & nan & nan \\
- &  &  & \multirow[c]{4}{*}{all} & 1 & all & $\theta_a_1^a$ & -0.146 & -0.129 & 0.073 & 0.015 \\
- &  &  &  & 2 & all & $\theta_a_2^a$ & -0.115 & -0.105 & 0.063 & 0.019 \\
- &  &  &  & 3 & all & $\theta_a_3^a$ & -0.224 & -0.185 & 0.009 & 0.006 \\
- &  &  &  & 4 & all & $\theta_a_4^a$ & -0.197 & -0.163 & 0.014 & 0.007 \\
- &  & \multirow[c]{2}{*}{price} & 0 & all & all & $\alpha_0$ & 0.100 & 0.083 & 0.009 & 0.004 \\
- &  &  & 1 & all & all & $\alpha_1$ & 0.200 & 0.164 & 0.010 & 0.006 \\
- &  & scrap_correction & all & all & all & $\sigma$ & 0.500 & 0.722 & 0.339 & 0.131 \\
-\multirow[c]{29}{*}{250000} & \multirow[c]{29}{*}{flow} & \multirow[c]{2}{*}{buying} & 0 & all & all & $\rho_0$ & 7.000 & -6.627 & 0.016 & 0.016 \\
- &  &  & 1 & all & all & $\rho_1$ & 7.000 & -6.770 & 0.018 & 0.018 \\
- &  & \multirow[c]{12}{*}{car_type} & \multirow[c]{4}{*}{0} & 1 & all & $\theta_1^0$ & 2.983 & nan & nan & nan \\
- &  &  &  & 2 & all & $\theta_2^0$ & 2.514 & nan & nan & nan \\
- &  &  &  & 3 & all & $\theta_3^0$ & 4.649 & nan & nan & nan \\
- &  &  &  & 4 & all & $\theta_4^0$ & 4.080 & nan & nan & nan \\
- &  &  & \multirow[c]{4}{*}{1} & 1 & all & $\theta_1^0$ & 2.983 & nan & nan & nan \\
- &  &  &  & 2 & all & $\theta_2^0$ & 2.514 & nan & nan & nan \\
- &  &  &  & 3 & all & $\theta_3^0$ & 4.649 & nan & nan & nan \\
- &  &  &  & 4 & all & $\theta_4^0$ & 4.080 & nan & nan & nan \\
- &  &  & \multirow[c]{4}{*}{all} & 1 & all & $\theta_1^0$ & 2.983 & 3.211 & 0.048 & 0.057 \\
- &  &  &  & 2 & all & $\theta_2^0$ & 2.514 & 2.950 & 0.066 & 0.069 \\
- &  &  &  & 3 & all & $\theta_3^0$ & 4.649 & 4.444 & 0.029 & 0.035 \\
- &  &  &  & 4 & all & $\theta_4^0$ & 4.080 & 3.925 & 0.028 & 0.036 \\
- &  & \multirow[c]{12}{*}{car_type_age} & \multirow[c]{4}{*}{0} & 1 & all & $\theta_a_1^a$ & -0.146 & nan & nan & nan \\
- &  &  &  & 2 & all & $\theta_a_2^a$ & -0.115 & nan & nan & nan \\
- &  &  &  & 3 & all & $\theta_a_3^a$ & -0.224 & nan & nan & nan \\
- &  &  &  & 4 & all & $\theta_a_4^a$ & -0.197 & nan & nan & nan \\
- &  &  & \multirow[c]{4}{*}{1} & 1 & all & $\theta_a_1^a$ & -0.146 & nan & nan & nan \\
- &  &  &  & 2 & all & $\theta_a_2^a$ & -0.115 & nan & nan & nan \\
- &  &  &  & 3 & all & $\theta_a_3^a$ & -0.224 & nan & nan & nan \\
- &  &  &  & 4 & all & $\theta_a_4^a$ & -0.197 & nan & nan & nan \\
- &  &  & \multirow[c]{4}{*}{all} & 1 & all & $\theta_a_1^a$ & -0.146 & -0.139 & 0.003 & 0.004 \\
- &  &  &  & 2 & all & $\theta_a_2^a$ & -0.115 & -0.110 & 0.005 & 0.005 \\
- &  &  &  & 3 & all & $\theta_a_3^a$ & -0.224 & -0.213 & 0.001 & 0.002 \\
- &  &  &  & 4 & all & $\theta_a_4^a$ & -0.197 & -0.188 & 0.001 & 0.002 \\
- &  & \multirow[c]{2}{*}{price} & 0 & all & all & $\alpha_0$ & 0.100 & 0.095 & 0.001 & 0.001 \\
- &  &  & 1 & all & all & $\alpha_1$ & 0.200 & 0.189 & 0.001 & 0.002 \\
- &  & scrap_correction & all & all & all & $\sigma$ & 0.500 & 0.764 & 0.040 & 0.041 \\
+\begin{tabular}{lllllrrlrrrrlrr}
+ &  &  &  & N & \multicolumn{5}{r}{50000} & \multicolumn{5}{r}{250000} \\
+ &  &  &  &  & MASE & MCSE & greek & mean & true value & MASE & MCSE & greek & mean & true value \\
+vartype & varname & consumer_type & car_type & car_age &  &  &  &  &  &  &  &  &  &  \\
+\multirow[c]{29}{*}{flow} & \multirow[c]{2}{*}{buying} & 0 & all & all & 0.037 & 0.040 & $\rho_0$ & 6.045 & 7.000 & 0.016 & 0.016 & $\rho_0$ & 6.597 & 7.000 \\
+ &  & 1 & all & all & 0.036 & 0.043 & $\rho_1$ & 6.402 & 7.000 & 0.016 & 0.017 & $\rho_1$ & 6.731 & 7.000 \\
+ & \multirow[c]{12}{*}{car_type} & \multirow[c]{4}{*}{0} & 1 & all & nan & nan & $u_1^car$ & nan & 3.000 & nan & nan & $u_1^car$ & nan & 3.000 \\
+ &  &  & 2 & all & nan & nan & $u_2^car$ & nan & 2.500 & nan & nan & $u_2^car$ & nan & 2.500 \\
+ &  &  & 3 & all & nan & nan & $u_3^car$ & nan & 4.600 & nan & nan & $u_3^car$ & nan & 4.600 \\
+ &  &  & 4 & all & nan & nan & $u_4^car$ & nan & 4.100 & nan & nan & $u_4^car$ & nan & 4.100 \\
+ &  & \multirow[c]{4}{*}{1} & 1 & all & nan & nan & $u_1^car$ & nan & 3.000 & nan & nan & $u_1^car$ & nan & 3.000 \\
+ &  &  & 2 & all & nan & nan & $u_2^car$ & nan & 2.500 & nan & nan & $u_2^car$ & nan & 2.500 \\
+ &  &  & 3 & all & nan & nan & $u_3^car$ & nan & 4.600 & nan & nan & $u_3^car$ & nan & 4.600 \\
+ &  &  & 4 & all & nan & nan & $u_4^car$ & nan & 4.100 & nan & nan & $u_4^car$ & nan & 4.100 \\
+ &  & \multirow[c]{4}{*}{all} & 1 & all & 0.079 & 0.094 & $u_1^car$ & 3.099 & 3.000 & 0.035 & 0.034 & $u_1^car$ & 3.081 & 3.000 \\
+ &  &  & 2 & all & 0.141 & 0.327 & $u_2^car$ & 3.370 & 2.500 & 0.056 & 0.071 & $u_2^car$ & 2.988 & 2.500 \\
+ &  &  & 3 & all & 0.070 & 0.063 & $u_3^car$ & 4.097 & 4.600 & 0.031 & 0.028 & $u_3^car$ & 4.394 & 4.600 \\
+ &  &  & 4 & all & 0.078 & 0.097 & $u_4^car$ & 3.730 & 4.100 & 0.033 & 0.030 & $u_4^car$ & 3.968 & 4.100 \\
+ & \multirow[c]{12}{*}{car_type_age} & \multirow[c]{4}{*}{0} & 1 & all & nan & nan & $u^age_1$ & nan & -0.100 & nan & nan & $u^age_1$ & nan & -0.100 \\
+ &  &  & 2 & all & nan & nan & $u^age_2$ & nan & -0.100 & nan & nan & $u^age_2$ & nan & -0.100 \\
+ &  &  & 3 & all & nan & nan & $u^age_3$ & nan & -0.200 & nan & nan & $u^age_3$ & nan & -0.200 \\
+ &  &  & 4 & all & nan & nan & $u^age_4$ & nan & -0.200 & nan & nan & $u^age_4$ & nan & -0.200 \\
+ &  & \multirow[c]{4}{*}{1} & 1 & all & nan & nan & $u^age_1$ & nan & -0.100 & nan & nan & $u^age_1$ & nan & -0.100 \\
+ &  &  & 2 & all & nan & nan & $u^age_2$ & nan & -0.100 & nan & nan & $u^age_2$ & nan & -0.100 \\
+ &  &  & 3 & all & nan & nan & $u^age_3$ & nan & -0.200 & nan & nan & $u^age_3$ & nan & -0.200 \\
+ &  &  & 4 & all & nan & nan & $u^age_4$ & nan & -0.200 & nan & nan & $u^age_4$ & nan & -0.200 \\
+ &  & \multirow[c]{4}{*}{all} & 1 & all & 0.004 & 0.006 & $u^age_1$ & -0.089 & -0.100 & 0.002 & 0.002 & $u^age_1$ & -0.095 & -0.100 \\
+ &  &  & 2 & all & 0.009 & 0.020 & $u^age_2$ & -0.096 & -0.100 & 0.004 & 0.005 & $u^age_2$ & -0.096 & -0.100 \\
+ &  &  & 3 & all & 0.003 & 0.003 & $u^age_3$ & -0.174 & -0.200 & 0.001 & 0.001 & $u^age_3$ & -0.190 & -0.200 \\
+ &  &  & 4 & all & 0.004 & 0.005 & $u^age_4$ & -0.173 & -0.200 & 0.002 & 0.002 & $u^age_4$ & -0.190 & -0.200 \\
+ & \multirow[c]{2}{*}{price} & 0 & all & all & 0.003 & 0.002 & $\mu_0$ & 0.088 & 0.100 & 0.001 & 0.001 & $\mu_0$ & 0.095 & 0.100 \\
+ &  & 1 & all & all & 0.003 & 0.003 & $\mu_1$ & 0.174 & 0.200 & 0.001 & 0.001 & $\mu_1$ & 0.189 & 0.200 \\
+ & scrap_correction & all & all & all & 0.080 & 0.085 & $\sigma$ & 0.726 & 0.500 & 0.036 & 0.035 & $\sigma$ & 0.769 & 0.500 \\
 \end{tabular}

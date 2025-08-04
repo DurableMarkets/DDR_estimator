@@ -443,7 +443,7 @@ def get_setup_paper_250():
     "u_a_even": None,
     'buying_nocar': None,
     }
-
+    breakpoint()
     return sim_options, mc_options, params_update, options_update, specification
 
 
@@ -452,8 +452,8 @@ def get_setup_paper_1250():
     num_car_types = 4
 
     chunk_size = 250_000
-    mc_iter = 10_000
-    N_mc = 750_000 #5_000_000 
+    mc_iter = 5_000
+    N_mc = 1_250_000 #5_000_000 
     sample_iter = N_mc * mc_iter // chunk_size
     # Estimation_size controls the sample size used in the estimation
     estimation_size = N_mc  # 1000000

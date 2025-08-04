@@ -2,7 +2,7 @@ import pandas as pd
 
 # We want 
 load_from = [
-    'setup_paper_25/npwls',
+    'setup_paper_50/npwls',
     'setup_paper_250/npwls'
 ]
 
@@ -48,7 +48,7 @@ tab = tab.sort_index()
 latex_notation=pd.DataFrame(index=tab.index, columns=['greek'])
 
 # price
-price_greek = lambda c: f'$\\alpha_{c}$'
+price_greek = lambda c: f'$\\mu_{c}$'
 latex_notation.loc[idx[:,:,'price', :], 'greek'] = [
     price_greek(c) for c in latex_notation.loc[idx[:,:,'price']].index.get_level_values('consumer_type').to_list()
     ]
@@ -60,13 +60,13 @@ latex_notation.loc[idx[:,:,'scrap_correction', :], 'greek'] = [
     ]
 
 # car type 
-price_greek = lambda j: f'$\\theta_{j}^0$'
+price_greek = lambda j: f'$u_{j}^car$'
 latex_notation.loc[idx[:,:,'car_type', :], 'greek'] = [
     price_greek(c) for c in latex_notation.loc[idx[:,:,'car_type']].index.get_level_values('car_type').to_list()
     ]
 
 # car type age
-price_greek = lambda j: f'$\\theta_a_{j}^a$'
+price_greek = lambda j: f'$u^age_{j}$'
 latex_notation.loc[idx[:,:,'car_type_age', :], 'greek'] = [
     price_greek(c) for c in latex_notation.loc[idx[:,:,'car_type_age']].index.get_level_values('car_type').to_list()
     ]
@@ -80,7 +80,7 @@ latex_notation.loc[idx[:,:,'buying', :], 'greek'] = [
 # adding greeks 
 tab=pd.concat([tab, latex_notation], axis=1)
 tab= tab[['greek', 'true value', 'mean', 'MCSE', 'MASE']]
-breakpoint()
+tab=tab.unstack('N').swaplevel(0,1, axis=1).sort_index(axis=1, level='N')
 # storing as latex
 with open(f'./output/simulations/output_tables/mc_table.tex', 'w') as f: 
     f.write(tab.style.format(precision=3).to_latex())

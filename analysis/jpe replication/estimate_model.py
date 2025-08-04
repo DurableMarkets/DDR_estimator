@@ -60,6 +60,7 @@ model_struct_arrays=create_model_struct_arrays(
 choices=pd.read_pickle(
     folders['out_data'] + 'ccps_all_years_reformatted.pkl'
 )
+breakpoint()
 scraps=pd.read_pickle(
     folders['out_data'] + 'scrap_all_years_reformatted.pkl'
 )
